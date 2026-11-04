@@ -11,7 +11,7 @@
   bin/mem-snapshot diff <编号>    只比对不改
 """
 import os, shutil, subprocess, sys, tarfile, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import MEM, BRAIN
 
 SNAP = os.path.join(BRAIN, "snapshots")

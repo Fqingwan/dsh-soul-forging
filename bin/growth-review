@@ -8,7 +8,7 @@
 用法: bin/growth-review [--n 20]
 """
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import MEM
 
 def main():

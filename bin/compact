@@ -14,7 +14,7 @@
 用法: bin/compact [--apply] [--budget 20000]
 """
 import json, os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import MEM, BRAIN, LIVE, atomic_write
 
 BUDGET_DEFAULT = 20000
@@ -47,7 +47,7 @@ def main():
     # ① 时间线瘦身
     print("\n== 时间线 ==")
     import subprocess
-    cmd = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive-log")]
+    cmd = [sys.executable, os.path.join(os.path.dirname(os.path.realpath(__file__)), "archive-log")]
     if not apply_:
         cmd.append("--dry")
     print(subprocess.run(cmd, capture_output=True, text=True).stdout.strip() or "（没输出）")

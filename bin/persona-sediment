@@ -13,7 +13,7 @@
 用法: bin/persona-sediment [--n 8]
 """
 import os, re, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import MEM, atomic_write
 
 def read(p):

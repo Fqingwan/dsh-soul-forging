@@ -9,7 +9,7 @@
       bin/debug-archive --tar    # 顺便打成一个包
 """
 import os, subprocess, sys, tarfile, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import DOCS
 
 DBG = os.path.join(DOCS, "debug")
@@ -26,7 +26,7 @@ def main():
     print(f"档案 {len(files)} 份，未登记 {len(missing)} 份")
     for f in missing:
         print(f"\n  {f}")
-        out = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "summarize-debug"),
+        out = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.realpath(__file__)), "summarize-debug"),
                               os.path.join(DBG, f)], capture_output=True, text=True).stdout.strip()
         print("  建议加这一行到 INDEX.md：")
         print("  " + (out or "（没提取到，手写吧）"))

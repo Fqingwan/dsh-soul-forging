@@ -15,7 +15,7 @@
 """
 import json, math, os, sys
 from datetime import datetime, timezone
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import load_state, save_state, BRAIN
 
 BASE = {1: 1.0, 2: 0.75, 3: 0.5}

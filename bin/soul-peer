@@ -18,7 +18,7 @@ source 字段就是"这是哪一端写的"，检索时能看出来源。
   bin/kit-peer push "ssh host 'cat >> ~/.soul-forging/brain/live.jsonl'"
 """
 import json, os, subprocess, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import BRAIN, LIVE, read_live, append_live, make_rec
 
 def ids():

@@ -10,7 +10,7 @@
 """
 import os, re, sys
 from datetime import datetime, timedelta, timezone
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "brain"))
 from soul_lib import MEM, atomic_write
 
 def main():

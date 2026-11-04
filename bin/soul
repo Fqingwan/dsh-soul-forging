@@ -20,11 +20,11 @@ import sys
 import time
 from datetime import datetime, timezone
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
-BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(ROOT, "brain")
-DOCS = os.environ.get("DOCS_DIR") or os.path.join(ROOT, "docs")
-LIVE = os.path.join(BRAIN, "live.jsonl")
+# 路径统一走公共模块 —— 别在这里另算一套，否则装成包后又会对不上
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "brain"))
+from soul_lib import MEM, BRAIN, DOCS, LIVE, atomic_write  # noqa: E402
+
 PORT = os.environ.get("BRAIN_PORT") or "3914"
 
 
