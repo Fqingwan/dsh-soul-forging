@@ -73,7 +73,7 @@ dsh plugin add dsh-soul-forging  # 装进 profile
 ### B. 只要命令行（不装插件）
 
 ```bash
-git clone https://github.com/<you>/dsh-soul-forging
+git clone https://github.com/Fqingwan/dsh-soul-forging
 cd dsh-soul-forging && bash install.sh
 ```
 
