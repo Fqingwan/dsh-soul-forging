@@ -62,5 +62,14 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/你的用户名/dsh-soul-forging.git"
+  },
+  "homepage": "https://github.com/你的用户名/dsh-soul-forging#readme",
+  "bugs": {
+    "url": "https://github.com/你的用户名/dsh-soul-forging/issues"
+  },
+  "author": ""
 }
