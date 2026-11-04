@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""压缩：让注入层和索引保持苗条。
+
+记忆会越堆越多，最后两个地方会先崩：
+  ① 注入层太大 → 每轮烧钱、还压得模型说不好话
+  ② 索引太长 → 检索变糊，搜什么都像
+
+这一步做三件事：
+  · 时间线瘦身（老的进 log-archive，照样搜得到）
+  · 运行期记忆归档（很老的只留摘要，原文进 live-archive）
+  · 报告注入块大小，超预算就点名该压哪个
+
+用法: bin/compact [--apply] [--budget 20000]
+"""
+import json, os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import MEM, BRAIN, LIVE, atomic_write
+
+BUDGET_DEFAULT = 20000
+INJECTED = ["SOUL.md", "MEMORY.md", "index.md", "NOW.md"]
+
+def sizes():
+    out = []
+    for n in INJECTED:
+        p = os.path.join(MEM, n)
+        out.append((n, len(open(p, encoding="utf-8").read()) if os.path.exists(p) else 0))
+    return out
+
+def main():
+    apply_ = "--apply" in sys.argv
+    budget = BUDGET_DEFAULT
+    if "--budget" in sys.argv:
+        budget = int(sys.argv[sys.argv.index("--budget") + 1])
+
+    print("== 注入层 ==")
+    total = 0
+    for n, sz in sizes():
+        flag = "  ← 偏大" if sz > budget * 0.5 else ""
+        print(f"  {n:16s} {sz:6d} 字{flag}")
+        total += sz
+    pct = total / budget * 100
+    print(f"  合计 {total} 字 / 预算 {budget}（{pct:.0f}%）")
+    if total > budget:
+        print("  ⚠ 超预算了：从最大的那个开始压，或调小 --budget")
+
+    # ① 时间线瘦身
+    print("\n== 时间线 ==")
+    import subprocess
+    cmd = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive-log")]
+    if not apply_:
+        cmd.append("--dry")
+    print(subprocess.run(cmd, capture_output=True, text=True).stdout.strip() or "（没输出）")
+
+    # ② 运行期记忆归档：超过 keep_days 的只留摘要
+    print("\n== 运行期记忆 ==")
+    if not os.path.exists(LIVE):
+        print("  没有 live.jsonl")
+    else:
+        from datetime import datetime, timedelta, timezone
+        keep = int(os.environ.get("COMPACT_KEEP_DAYS") or 180)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=keep)).strftime("%Y-%m-%d")
+        keep_recs, old_recs = [], []
+        for line in open(LIVE, encoding="utf-8"):
+            s = line.strip()
+            if not s: continue
+            try: r = json.loads(s)
+            except Exception: continue
+            (old_recs if (r.get("date") or "") < cutoff else keep_recs).append(r)
+        print(f"  早于 {cutoff} 的：{len(old_recs)} 条，保留中的：{len(keep_recs)} 条")
+        if old_recs and apply_:
+            ap = os.path.join(BRAIN, "live-archive.jsonl")
+            with open(ap, "a", encoding="utf-8") as f:
+                for r in old_recs:
+                    r2 = dict(r); r2["archived"] = True
+                    f.write(json.dumps(r2, ensure_ascii=False) + "\n")
+            atomic_write(LIVE, "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in keep_recs))
+            print(f"  已归档 {len(old_recs)} 条 → live-archive.jsonl（原文没丢）")
+        elif old_recs:
+            print("  （加 --apply 才真归档）")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

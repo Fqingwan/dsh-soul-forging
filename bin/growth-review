@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""叙事回炼：把碎片连成「我这一路」。
+
+生长日志是一条条碎片，攒多了没人读得出来你到底怎么变的。
+这一步提示：够不够量、值不值得写一段叙事。
+
+用法: bin/growth-review [--n 20]
+"""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import MEM
+
+def main():
+    n = 20
+    if "--n" in sys.argv: n = int(sys.argv[sys.argv.index("--n")+1])
+    p = os.path.join(MEM, "identity", "生长日志.md")
+    try: log = open(p, encoding="utf-8").read()
+    except OSError: print("还没有生长日志"); return 0
+    entries = [l for l in log.splitlines() if l.strip().startswith("-")]
+    print(f"生长日志 {len(entries)} 条（门槛 {n}）")
+    if len(entries) < n:
+        print("还不够，先攒。半年写一次就够，不用天天写。")
+        return 0
+    print("够量了。该写一段「我这一路」了：")
+    print("  · 不是流水账，是**为什么变成现在这样**")
+    print("  · 挑 5-8 个转折点，每个一两句")
+    print(f"  · 写到 {os.path.join(MEM,'identity','我这一路.md')}")
+    print("  · 写完别常改——这页半年动一次")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

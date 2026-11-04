@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""日志归档：log.md 太长就把老条目整段挪进 log-archive.md。
+
+**不是删除**——归档页照样被小脑索引、照样搜得到。
+目的只是别让 log.md 无限长（它每轮都要读，长了既慢又烧钱）。
+
+用法: bin/archive-log [--keep 30] [--dry]
+      --keep 只留最近 N 天（默认 30）
+"""
+import os, re, sys
+from datetime import datetime, timedelta, timezone
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import MEM, atomic_write
+
+def main():
+    keep = 30
+    if "--keep" in sys.argv:
+        keep = int(sys.argv[sys.argv.index("--keep") + 1])
+    dry = "--dry" in sys.argv
+    p = os.path.join(MEM, "log.md")
+    if not os.path.exists(p):
+        print("没有 log.md"); return 0
+    text = open(p, encoding="utf-8").read()
+    # 按条目切：## [日期...] 开头
+    chunks = re.split(r"\n(?=##\s+\[)", "\n" + text)
+    head, items = "", []
+    for c in chunks:
+        c = c.strip()
+        if not c: continue
+        if not c.startswith("##"):
+            head = c; continue
+        m = re.match(r"##\s+\[([\d-]+)", c)
+        items.append((m.group(1) if m else "", c))
+    if not items:
+        print("log.md 里没有条目"); return 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=keep)).strftime("%Y-%m-%d")
+    old = [(d, c) for d, c in items if d and d < cutoff]
+    new = [(d, c) for d, c in items if not (d and d < cutoff)]
+    if not old:
+        print(f"没有早于 {cutoff} 的条目，不用归档"); return 0
+    if dry:
+        print(f"[dry] 会归档 {len(old)} 条，留 {len(new)} 条"); return 0
+
+    ap = os.path.join(MEM, "log-archive.md")
+    prev = open(ap, encoding="utf-8").read() if os.path.exists(ap) else "# Log 归档\n\n> 从 log.md 挪出来的旧条目，一字未改。\n"
+    atomic_write(ap, prev.rstrip() + "\n\n" + "\n\n".join(c for _, c in old) + "\n")
+    atomic_write(p, (head + "\n\n" if head else "") + ("> 更早的记录在 [log-archive.md](log-archive.md)，照样搜得到。\n\n" if True else "") + "\n\n".join(c for _, c in new) + "\n")
+    print(f"归档 {len(old)} 条 → log-archive.md；log.md 剩 {len(new)} 条")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

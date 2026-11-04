@@ -96,8 +96,18 @@ def walk_md(base, skip_dirs=SKIP_DIRS):
                 yield os.path.join(root, fn)
 
 
+def load_forgotten():
+    """已标记遗忘的 id —— 索引时跳过（原文没删，state.json 里记着）"""
+    try:
+        with open(os.path.join(BRAIN, "state.json"), encoding="utf-8") as f:
+            return set(json.load(f).get("forgotten", {}).keys())
+    except Exception:
+        return set()
+
+
 def main():
     entries = []
+    forgotten = load_forgotten()
 
     # ① 记忆库
     for path in walk_md(MEM):
@@ -170,8 +180,9 @@ def main():
                     text = str(d.get("text") or "").strip()
                     if len(text) < 4:
                         continue
+                    # 用记录自己的 id —— 双端同步去重、遗忘找回都靠它，不能重新编号
                     entries.append({
-                        "id": f"live#{i}", "page": "live", "title": "运行时记录",
+                        "id": str(d.get("id") or f"live#{i}"), "page": "live", "title": "运行时记录",
                         "section": str(d.get("section") or ""), "kind": str(d.get("kind") or "chat"),
                         "date": str(d.get("date") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
                         "salience": int(d.get("salience") or 2),
@@ -179,6 +190,11 @@ def main():
                     })
         except OSError:
             pass
+
+    if forgotten:
+        before = len(entries)
+        entries = [e for e in entries if e["id"] not in forgotten]
+        print(f"跳过已遗忘 {before - len(entries)} 条")
 
     # 原子写：先写临时文件再 rename，避免读到半截
     os.makedirs(BRAIN, exist_ok=True)

@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# 记忆链路一键同步：写活索引 → 通知服务 → 同步另一边 → 体检
-# 纯本地，不需要服务器。云备份如果配了就一起跑（见 config 里的 MEMKIT_BACKUP_CMD）。
+# 记忆链路一键同步（纯本地）：
+#   补摘要 → 时间线瘦身 → 建索引 → 通知服务 → 体检 →（可选）备份
+# 一步失败不挡后面——每步都记进 cron-run.log，失败的另外写 alarm.log。
 source "$(dirname "$0")/_common.sh"
 LOCK=/tmp/memkit-sync.lock
 exec 9>"$LOCK"
 if ! flock -n 9; then echo "同步已在运行，跳过"; exit 0; fi
 
 R="$BIN_DIR/runlog"; rc=0
-$R "index"  -- "$PY" "$BRAIN_DIR/index.py"                              || rc=$((rc+1))
-$R "reload" -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+2))
-$R "check"  -- "$BIN_DIR/kit-memory" check                              || rc=$((rc+4))
-[ -n "${MEMKIT_BACKUP_CMD:-}" ] && { $R "backup" -- bash -c "$MEMKIT_BACKUP_CMD" || rc=$((rc+8)); }
+$R "live-summary" -- "$PY" "$BRAIN_DIR/fix-live-summary.py"                  || rc=$((rc+1))
+$R "archive-log"  -- "$BIN_DIR/archive-log"                                  || rc=$((rc+2))
+$R "index"        -- "$PY" "$BRAIN_DIR/index.py"                             || rc=$((rc+4))
+$R "reload"       -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+8))
+$R "check"        -- "$BIN_DIR/kit-memory" check                             || rc=$((rc+16))
+[ -n "${MEMKIT_BACKUP_CMD:-}" ] && { $R "backup" -- bash -c "$MEMKIT_BACKUP_CMD" || rc=$((rc+32)); }
 
 if [ $rc -eq 0 ]; then echo "sync ok"; else echo "sync 有失败项 rc=$rc（看 $BRAIN_DIR/alarm.log）"; fi
 exit 0

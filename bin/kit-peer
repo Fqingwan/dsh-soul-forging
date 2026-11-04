@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""双端互通：让两个入口（比如手机 + 电脑、web + bot）共用同一份记忆。
+
+原理只有一条：**谁写了都往 live.jsonl 里追加一行，带 source 标记来源。**
+同步就是互相把对方没有的 id 抄过来，重复的跳过。
+
+三种接法：
+  bin/kit-peer export               导出成 jsonl（给对面）
+  bin/kit-peer import <文件>        从对面导进来（按 id 去重）
+  bin/kit-peer pull <命令>          跑一条命令拿 jsonl（比如 ssh cat）
+  bin/kit-peer push <命令>          把本地新增的吐给一条命令（比如 ssh tee）
+
+source 字段就是"这是哪一端写的"，检索时能看出来源。
+
+用法示例：
+  bin/kit-peer pull "ssh host cat ~/.memkit/brain/live.jsonl"
+  bin/kit-peer push "ssh host 'cat >> ~/.memkit/brain/live.jsonl'"
+"""
+import json, os, subprocess, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import BRAIN, LIVE, read_live, append_live, make_rec
+
+def ids():
+    return {r.get("id") for _, r in read_live() if r}
+
+def import_lines(lines, source_hint=""):
+    have = ids()
+    added = 0
+    for line in lines:
+        s = (line or "").strip()
+        if not s: continue
+        try: r = json.loads(s)
+        except Exception: continue
+        rid = r.get("id")
+        if not rid or rid in have:
+            continue
+        if not r.get("source"):
+            r["source"] = source_hint or "peer"
+        if not str(r.get("summary") or "").strip():
+            r["summary"] = make_rec(r.get("text", ""))["summary"]
+        append_live(r); have.add(rid); added += 1
+    return added
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); return 1
+    c = sys.argv[1]
+    if c == "export":
+        for _, r in read_live():
+            if r: print(json.dumps(r, ensure_ascii=False))
+        return 0
+    if c == "import":
+        if len(sys.argv) < 3: print("要个文件"); return 1
+        n = import_lines(open(sys.argv[2], encoding="utf-8").read().splitlines())
+        print(f"导入 {n} 条（重复的跳过）"); return 0
+    if c == "pull":
+        cmd = sys.argv[2]
+        out = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if out.returncode != 0:
+            print(f"拉取失败：{out.stderr[:200]}"); return 1
+        n = import_lines(out.stdout.splitlines())
+        print(f"从对面拉了 {n} 条"); return 0
+    if c == "push":
+        cmd = sys.argv[2]
+        payload = "".join(json.dumps(r, ensure_ascii=False) + "\n" for _, r in read_live() if r)
+        p = subprocess.run(cmd, shell=True, input=payload, capture_output=True, text=True)
+        if p.returncode != 0:
+            print(f"推送失败：{p.stderr[:200]}"); return 1
+        print(f"已推送 {len(payload.splitlines())} 条"); return 0
+    print(__doc__); return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

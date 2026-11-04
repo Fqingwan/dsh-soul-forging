@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""从调试原文里提炼一行「问题 → 怎么做 → 结果」。
+
+只写结果等于没写——下次遇到同样的坑，你要的是"当时怎么绕过去的"。
+所以提取时要优先抓「怎么做的」那段。
+
+用法: bin/summarize-debug docs/debug/20261104-xxx.md
+"""
+import os, re, sys
+from datetime import date
+
+KEYS = ("问题", "现象", "原因", "真因", "怎么做", "改法", "修法", "解决", "结果", "结论")
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); return 1
+    p = sys.argv[1]
+    txt = open(p, encoding="utf-8").read()
+    title = ""
+    m = re.search(r"^#\s+(.+)", txt, re.M)
+    if m: title = m.group(1).strip()
+    picks = {}
+    for line in txt.splitlines():
+        s = line.strip()
+        for k in KEYS:
+            # 只剥掉字段名的前缀，正文里的冒号（比如 127.0.0.1:3914）不许再切
+            for prefix in (f"**{k}**：", f"**{k}**:", f"**{k}**", f"{k}：", f"{k}:"):
+                if s.startswith(prefix):
+                    val = s[len(prefix):].strip().lstrip("*").strip()
+                    if val:
+                        picks.setdefault(k, val[:120])
+                    break
+    problem = title or picks.get("问题") or picks.get("现象") or "（未写）"
+    how = picks.get("怎么做") or picks.get("改法") or picks.get("修法") or picks.get("原因") or "（没写怎么做 ← 补上）"
+    result = picks.get("结果") or picks.get("结论") or "（未写）"
+    print(f"- [{date.today()}] {problem} → {how} → {result}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

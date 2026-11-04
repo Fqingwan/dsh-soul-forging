@@ -32,95 +32,79 @@
 
 有两种用法，按你需要挑：
 
-### 用法 A：当 DSH 插件（记忆自动注入）
+### 用
+
+### 记忆的完整生命周期
 
 ```bash
-# 1) 铺一份空白记忆库到 ~/.memkit/memory
-bash bin/init-home
+# 写
+bin/kit-memory write "内容" --kind chat --section 小标题
 
-# 2) 装进 DSH 的 profile
-dsh plugin add dsh-memkit          # 发布到 npm 后
-# 或者从本地目录装：
-dsh plugin add /path/to/dsh-memkit
-
-# 3) 重开 DSH，记忆会自动注入
-```
-
-装好后每轮对话开头都会自动带上 `~/.memkit/memory` 里的那四个文件。
-想换位置：配置里设 `memoryDir`，或设环境变量 `MEMORY_DIR`。
-
-### 用法 B：只要命令行（不装插件）
-
-```bash
-bash install.sh
-```
-
-适合接自己的 agent、或者只想用它的检索能力。需要 Python 3.8+。
-
-**两种都不需要服务器、不需要数据库。**
-
----
-
-## 用
-
-```bash
+# 查
 brain "关键词"                  # 查小脑
 brain --topics                  # 看有哪些分类
-bin/kit-memory write "内容"     # 记一条运行期记忆
-bin/kit-memory index            # 重建索引
-bin/kit-memory check            # 体检（漏登记/断链/缺摘要）
-bin/kit-memory digest           # 收尾该做哪四件事
-bin/sync                        # 一键：建索引 + 重载 + 体检
-bash bin/serve                  # 起常驻检索服务（可选）
+kit-memory digest               # 收尾该做哪四件事
+
+# 养
+bin/fix-live-summary.py         # 补摘要（缺摘要=只记得"有这么回事"）
+bin/archive-log                 # 时间线瘦身（老的进 archive，照样搜得到）
+bin/compact                     # 全面体检：注入层多大、该压哪
+bin/persona-sediment            # 性格沉淀：攒够了就提示回炼进底色
+bin/growth-review               # 叙事回炼：碎片连成「我这一路」
+
+# 忘
+bin/brain-forget                # 报告该忘了哪些（按强度衰减）
+bin/brain-forget --apply        # 真标记（**不删原文**）
+bin/brain-forget --restore <id> # 找回，并钉住不再淡掉
+
+# 保底
+bin/mem-snapshot save "说明"    # 存一卷
+bin/mem-snapshot ls / restore / diff
+
+# 双端
+bin/kit-peer export | import / pull / push
+
+# 收尾
+bash bin/sync                   # 补摘要→瘦身→建索引→重载→体检
 ```
+
+### 命令一览
+
+| 命令 | 干什么 |
+|---|---|
+| `brain` | 查小脑（关键词） |
+| `kit-memory` | `write` / `index` / `check` / `digest` |
+| `kit-boot` | 打印开局注入块（任何 agent 可用） |
+| `sync` | 一键跑完整条链路 |
+| `serve` | 起常驻检索服务 |
+| `init-home` | 铺空白记忆库到 `~/.memkit/memory` |
+| `fix-live-summary.py` | 补摘要、隔离坏行 |
+| `archive-log` | 时间线归档 |
+| `compact` | 压缩与预算体检 |
+| `brain-forget` | 遗忘 / 找回 |
+| `mem-snapshot` | 快照 / 回滚 / 比对 |
+| `kit-peer` | 双端互通 |
+| `persona-sediment` | 性格沉淀候选 |
+| `growth-review` | 叙事回炼提示 |
+| `debug-archive` | 调试档案登记检查 |
+| `summarize-debug` | 从调试原文提炼一行索引 |
+| `debug-recall` | 查调试旧账 |
+| `runlog` | 跑命令并留痕 |
 
 ---
 
-## 插件形态的配置
+## 三层记忆怎么对应
 
-如果装成 DSH 插件，这几个可以在 profile 配置里覆盖：
+| 层 | 文件 | 谁读 | 怎么维护 |
+|---|---|---|---|
+| **短期** | `NOW.md` | 每轮注入 | 每次收尾刷新三节 |
+| **中期** | `log.md`、`diary/`、`live.jsonl` | 检索 | `kit-memory write` 写，`archive-log` 瘦身 |
+| **长期** | `SOUL.md`、`core/`、`identity/` | 每轮注入 | 铸魂建立，`persona-sediment` 提示回炼 |
+| **检索层** | `brain/entries.json` | 按需查 | `sync` 重建 |
+| **外置层** | `docs/tech`、`docs/debug` | 出错才查 | tech 进小脑，debug 只留索引 |
 
-| 配置 | 默认 | 说明 |
-|---|---|---|
-| `memoryDir` | `~/.memkit/memory` | 记忆库位置 |
-| `bootMaxChars` | `20000` | 注入字数上限 |
-| `autoInject` | `true` | 关掉就不注入（只留命令行） |
-| `registerSkill` | `true` | 关掉就不注册 memkit 技能 |
-
-插件本体在 `lib/plugin.js`，就一百多行：**只读四个 markdown，拼成一块注入，不写任何文件**。
-
----
-
-## 接进你的 agent（接线层）
-
-这套东西不会自己长在模型身上——**你得在每轮开头把记忆喂进去**。三种接法：
-
-**① 命令行（任何语言都能调）**
-
-```bash
-kit-boot                 # 打印开局注入块，拼到 system prompt 最前面
-kit-boot --budget 12000  # 限制字数（超了从末尾截，先保 SOUL）
-kit-boot --list          # 看四个文件各多长
-```
-
-**② Python 模块**
-
-```python
-from kit import boot, recall, remember
-
-system_prompt = "你是一个助手…\n\n" + boot()      # 开局注入
-context       = recall("他说过在意什么", n=3)      # 想起来了就查
-remember("今天他说想换个方向", kind="chat")        # 记一条
-```
-
-**③ 直接读文件**
-
-就是四个 markdown：`SOUL.md` `MEMORY.md` `index.md` `NOW.md`。
-想自己控制格式就自己拼，效果一样。
-
-> **注意**：`boot()` 只管注入，**不改任何文件**。要写记忆走 `remember()`。
-> 注入块默认 3.4K 字左右——这就是"每轮要花的固定开销"，觉得贵就调 `--budget`，
-> 或者定期把四个文件压瘦。
+**遗忘是设计的一部分**：`salience:1` 几乎不忘，`3` 会自己淡掉；被反复想起的变牢。
+特意找回的会**钉住**，不再淡。
 
 ---
 

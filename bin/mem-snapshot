@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""记忆快照：打包、列表、回滚、比对。
+
+回滚不是单向门——执行前会先把「当前」也存一卷，旧目录挪到 .before-restore-*，不删。
+
+用法:
+  bin/mem-snapshot save "说明"    存一卷
+  bin/mem-snapshot ls            看所有卷
+  bin/mem-snapshot restore <编号> 回滚
+  bin/mem-snapshot diff <编号>    只比对不改
+"""
+import os, shutil, subprocess, sys, tarfile, time
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import MEM, BRAIN
+
+SNAP = os.path.join(BRAIN, "snapshots")
+
+def ls():
+    os.makedirs(SNAP, exist_ok=True)
+    fs = sorted(f for f in os.listdir(SNAP) if f.endswith(".tgz"))
+    if not fs: print("还没有快照"); return []
+    for i, f in enumerate(fs):
+        print(f"{i:>2}  {f}  {os.path.getsize(os.path.join(SNAP,f))//1024}KB")
+    return fs
+
+def save(note=""):
+    os.makedirs(SNAP, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    out = os.path.join(SNAP, f"{stamp}.tgz")
+    with tarfile.open(out, "w:gz") as t:
+        t.add(MEM, arcname="memory")
+    if note:
+        open(os.path.join(SNAP, f"{stamp}.note"), "w", encoding="utf-8").write(note)
+    print(f"已存：{out}（{os.path.getsize(out)//1024}KB）{('·' + note) if note else ''}")
+    return out
+
+def restore(idx):
+    fs = sorted(f for f in os.listdir(SNAP) if f.endswith(".tgz")) if os.path.isdir(SNAP) else []
+    if not fs: print("没有快照"); return 1
+    i = int(idx)
+    if not (0 <= i < len(fs)): print("编号越界"); return 1
+    save("回滚前自动存档")                      # 先存当前
+    bak = MEM + f".before-restore-{time.strftime('%Y%m%d-%H%M%S')}"
+    if os.path.isdir(MEM): shutil.move(MEM, bak)
+    with tarfile.open(os.path.join(SNAP, fs[i])) as t:
+        t.extractall(os.path.dirname(MEM.rstrip("/")))
+    print(f"已回滚到 {fs[i]}；原目录留在 {bak}（没删）")
+    return 0
+
+def diff(idx):
+    fs = sorted(f for f in os.listdir(SNAP) if f.endswith(".tgz")) if os.path.isdir(SNAP) else []
+    i = int(idx)
+    if not fs or not (0 <= i < len(fs)): print("编号不对"); return 1
+    tmp = "/tmp/memkit-diff"
+    shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+    with tarfile.open(os.path.join(SNAP, fs[i])) as t: t.extractall(tmp)
+    a, b = os.path.join(tmp, "memory"), MEM
+    print(subprocess.run(["diff", "-rq", a, b], capture_output=True, text=True).stdout or "（没有差异）")
+    shutil.rmtree(tmp, ignore_errors=True)
+    return 0
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); return 1
+    c = sys.argv[1]
+    if c == "save": return save(sys.argv[2] if len(sys.argv) > 2 else "") and 0
+    if c == "ls": ls(); return 0
+    if c == "restore": return restore(sys.argv[2])
+    if c == "diff": return diff(sys.argv[2])
+    print(__doc__); return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

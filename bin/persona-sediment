@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""性格沉淀：把攒下的收获回炼进「底色」。
+
+**它不是自动改人格的机器。** 人格不能由脚本决定，那就不叫性格了。
+它做的是：把该回炼的东西摆出来，让你（或你的 AI）来判断。
+
+规则：
+  · 生长日志攒够 N 条（默认 8）→ 提示回炼
+  · 只给候选，不动底色.md 一个字
+  · 真要改，改完在 log.md 记一条「为什么变」
+
+用法: bin/persona-sediment [--n 8]
+"""
+import os, re, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
+from memkit_lib import MEM, atomic_write
+
+def read(p):
+    try: return open(p, encoding="utf-8").read()
+    except OSError: return ""
+
+def main():
+    n = 8
+    if "--n" in sys.argv: n = int(sys.argv[sys.argv.index("--n")+1])
+    log = read(os.path.join(MEM, "identity", "生长日志.md"))
+    base = read(os.path.join(MEM, "identity", "底色.md"))
+    entries = [l for l in log.splitlines() if l.strip().startswith("-") and "示例" not in l]
+    print(f"生长日志：{len(entries)} 条 · 底色现长 {len(base)} 字")
+    if len(entries) < n:
+        print(f"还不到 {n} 条，先攒着。攒够了再回炼，别把底色灌肿。")
+        return 0
+    pending = [e for e in entries if "已回炼" not in e]
+    print(f"\n有 {len(pending)} 条还没回炼：")
+    for e in pending[-12:]:
+        print("  " + e.strip()[:100])
+    out = os.path.join(MEM, "identity", "底色-候选.md")
+    atomic_write(out, f"""---
+summary: 待回炼进底色的候选（脚本生成，未采纳）
+salience: 3
+---
+
+# 底色候选
+
+> 从生长日志里捞出来的 {len(pending)} 条。**这些还没进底色**——
+> 挑真正改变你的，写进 `底色.md`，然后在原文后面标 `已回炼`。
+
+{chr(10).join(e.strip() for e in pending)}
+
+## 回炼完请做三件
+
+1. 改 `底色.md`（只改真的被改变的那几条）
+2. 生长日志里标 `已回炼`
+3. `log.md` 记一条：什么时候、为什么这么改
+""")
+    print(f"\n候选写到：{out}")
+    print("**没有自动改底色**——人格不能由脚本决定。")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

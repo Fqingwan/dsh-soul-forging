@@ -10,17 +10,25 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "memkit-boot": "./bin/kit-boot",
     "memkit": "./bin/kit-memory",
+    "memkit-boot": "./bin/kit-boot",
     "memkit-sync": "./bin/sync",
     "memkit-serve": "./bin/serve",
-    "memkit-recall": "./bin/brain"
+    "memkit-recall": "./bin/brain",
+    "memkit-init": "./bin/init-home",
+    "memkit-forget": "./bin/brain-forget",
+    "memkit-compact": "./bin/compact",
+    "memkit-snapshot": "./bin/mem-snapshot",
+    "memkit-peer": "./bin/kit-peer",
+    "memkit-debug": "./bin/debug-archive"
   },
   "files": [
     "lib",
     "bin",
     "brain/index.py",
     "brain/server.py",
+    "brain/memkit_lib.py",
+    "brain/fix-live-summary.py",
     "memory",
     "docs",
     "kit.py",
@@ -38,5 +46,12 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1"
   },
-  "keywords": ["dsh", "dsh-plugin", "memory", "markdown", "llm", "agent"]
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "memory",
+    "markdown",
+    "llm",
+    "agent"
+  ]
 }

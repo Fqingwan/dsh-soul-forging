@@ -54,7 +54,11 @@ def strength_of(e):
     decay = math.exp(-age / HALFLIFE.get(sal, 180)) if age is not None else 1.0
     hits = _state["touch"].get(e.get("id"), 0)
     bonus = min(0.35, hits * 0.05)
-    return max(0.0, min(1.0, base * decay + bonus))
+    val = base * decay + bonus
+    # 钉住的记忆不再淡掉 —— "我特意找回的东西，就该一直在"
+    if e.get("id") in (_state.get("pinned") or {}):
+        val = max(val, 0.6)
+    return max(0.0, min(1.0, val))
 
 
 def age_days(d):
@@ -223,6 +227,7 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(length) if length else b""
         with _lock:
             if u.path == "/reload":
+                load_state()          # 遗忘/钉住的状态也要重读，不然改了不生效
                 cnt = reload_data()
                 return self._send(200, json.dumps({"ok": True, "count": cnt}))
             if u.path == "/touch":
