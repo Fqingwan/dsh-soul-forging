@@ -79,6 +79,36 @@ cd dsh-soul-forging && bash install.sh
 
 两种都**不需要服务器**。想换记忆位置：设 `MEMORY_DIR`，或插件配置里改 `memoryDir`。
 
+### 装的时候可能遇到的两个坑
+
+**① 全局安装要 sudo**
+
+```bash
+sudo npm i -g dsh-soul-forging
+```
+
+不给 sudo 会报 `EACCES: permission denied, mkdir '/usr/local/lib/node_modules'`。
+不想用 sudo 就换用户级 prefix：`npm config set prefix ~/.npm-global`。
+
+**② 国内镜像源会滞后**
+
+如果配了淘宝/腾讯云之类的镜像，新版本可能要几小时才同步，装的时候报
+`No matching version found for xxx@0.y.z`。这时候指定官方源：
+
+```bash
+sudo npm i -g dsh-soul-forging --registry https://registry.npmjs.org
+```
+
+### 数据放在哪
+
+**代码和数据是分开的**：
+
+- 代码 → `node_modules/dsh-soul-forging/`（升级时会整个换掉）
+- 数据 → `~/.soul-forging/{memory,brain}`（你的记忆，升级不碰）
+
+这也是为什么不能用 `sudo` 跑 `soul` 系列命令——`sudo` 会把 `HOME` 变成 `/root`，
+它就会去找 `/root/.soul-forging`，看起来像"记忆丢了"。**日常用普通用户跑。**
+
 ---
 
 ## 用
