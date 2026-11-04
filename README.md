@@ -30,11 +30,34 @@
 
 ## 装
 
+有两种用法，按你需要挑：
+
+### 用法 A：当 DSH 插件（记忆自动注入）
+
+```bash
+# 1) 铺一份空白记忆库到 ~/.memkit/memory
+bash bin/init-home
+
+# 2) 装进 DSH 的 profile
+dsh plugin add dsh-memkit          # 发布到 npm 后
+# 或者从本地目录装：
+dsh plugin add /path/to/dsh-memkit
+
+# 3) 重开 DSH，记忆会自动注入
+```
+
+装好后每轮对话开头都会自动带上 `~/.memkit/memory` 里的那四个文件。
+想换位置：配置里设 `memoryDir`，或设环境变量 `MEMORY_DIR`。
+
+### 用法 B：只要命令行（不装插件）
+
 ```bash
 bash install.sh
 ```
 
-需要 Python 3.8+。不需要服务器、不需要数据库、不需要 npm。
+适合接自己的 agent、或者只想用它的检索能力。需要 Python 3.8+。
+
+**两种都不需要服务器、不需要数据库。**
 
 ---
 
@@ -50,6 +73,21 @@ bin/kit-memory digest           # 收尾该做哪四件事
 bin/sync                        # 一键：建索引 + 重载 + 体检
 bash bin/serve                  # 起常驻检索服务（可选）
 ```
+
+---
+
+## 插件形态的配置
+
+如果装成 DSH 插件，这几个可以在 profile 配置里覆盖：
+
+| 配置 | 默认 | 说明 |
+|---|---|---|
+| `memoryDir` | `~/.memkit/memory` | 记忆库位置 |
+| `bootMaxChars` | `20000` | 注入字数上限 |
+| `autoInject` | `true` | 关掉就不注入（只留命令行） |
+| `registerSkill` | `true` | 关掉就不注册 memkit 技能 |
+
+插件本体在 `lib/plugin.js`，就一百多行：**只读四个 markdown，拼成一块注入，不写任何文件**。
 
 ---
 

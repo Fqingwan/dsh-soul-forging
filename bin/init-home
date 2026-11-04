@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# 把空白记忆库铺到用户目录（装成插件时用这个）
+# 默认 $HOME/.memkit/memory，可用 MEMORY_DIR 覆盖
+set -uo pipefail
+MEMKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET="${MEMORY_DIR:-$HOME/.memkit/memory}"
+
+if [ -d "$TARGET" ] && [ -n "$(ls -A "$TARGET" 2>/dev/null)" ]; then
+  echo "目标已存在且有内容：$TARGET"
+  echo "不覆盖。要重来先自己备份并删掉它。"
+  exit 1
+fi
+
+mkdir -p "$TARGET"
+cp -a "$MEMKIT_ROOT/memory/." "$TARGET/"
+echo "✓ 空白记忆库已铺到：$TARGET"
+echo
+echo "接下来："
+echo "  1. 填 $TARGET/SOUL.md"
+echo "  2. 按 $TARGET/BOOTSTRAP.md 走一遍铸魂"
+echo "  3. 建索引：MEMORY_DIR=$TARGET python3 $MEMKIT_ROOT/brain/index.py"
+echo "  4. 起服务：MEMORY_DIR=$TARGET bash $MEMKIT_ROOT/bin/serve"

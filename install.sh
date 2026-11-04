@@ -39,7 +39,12 @@ bash bin/serve || echo "! 服务没起来，不影响使用（检索会自动现
 # 5) 下一步
 cat <<EOF
 
-== 装好了 ==
+== 装好了（命令行模式）==
+
+想当 DSH 插件用（记忆自动注入）：
+  bash bin/init-home           # 铺一份空白记忆库到 ~/.memkit/memory
+  dsh plugin add $(pwd)        # 装进 profile，重开 DSH 即生效
+
 
 接下来：
   1. 打开 memory/SOUL.md，先把「身份」和「沟通风格」填了
