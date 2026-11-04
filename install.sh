@@ -21,10 +21,15 @@ else
   echo "! 没有 curl —— 检索会退化成「每次现算」，慢一点但能用"
 fi
 
-# 2) 记忆库结构
-for d in memory memory/core memory/identity memory/user memory/decisions memory/diary memory/raw brain docs/tech docs/debug; do
-  [ -d "$d" ] || { mkdir -p "$d"; echo "✓ 补建 $d"; }
-done
+# 2) 记忆库：没有就初始化到 ~/.soul-forging/memory（数据不放代码目录）
+DATA="${SOUL_DATA_DIR:-$HOME/.soul-forging}"
+if [ -d "$DATA/memory" ] && [ -n "$(ls -A "$DATA/memory" 2>/dev/null)" ]; then
+  echo "✓ 已有记忆库：$DATA/memory"
+else
+  MEMORY_DIR="$DATA/memory" bash bin/init-home || true
+fi
+mkdir -p "$DATA/brain"
+export MEMORY_DIR="$DATA/memory" BRAIN_DIR="$DATA/brain"
 
 # 3) 建索引
 echo

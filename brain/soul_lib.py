@@ -10,8 +10,9 @@ import re
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
-BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(ROOT, "brain")
+DATA_ROOT = os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging")
+MEM = os.environ.get("MEMORY_DIR") or os.path.join(DATA_ROOT, "memory")
+BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(DATA_ROOT, "brain")
 DOCS = os.environ.get("DOCS_DIR") or os.path.join(ROOT, "docs")
 LIVE = os.path.join(BRAIN, "live.jsonl")
 STATE = os.path.join(BRAIN, "state.json")

@@ -14,10 +14,12 @@ fi
 
 mkdir -p "$TARGET"
 cp -a "$MEMKIT_ROOT/memory/." "$TARGET/"
+# 数据目录也建出来（索引和服务写这里，别写进包目录）
+mkdir -p "${BRAIN_DIR:-$(dirname "$TARGET")/brain}"
 echo "✓ 空白记忆库已铺到：$TARGET"
 echo
 echo "接下来："
 echo "  1. 填 $TARGET/SOUL.md"
 echo "  2. 按 $TARGET/BOOTSTRAP.md 走一遍铸魂"
-echo "  3. 建索引：MEMORY_DIR=$TARGET python3 $MEMKIT_ROOT/brain/index.py"
-echo "  4. 起服务：MEMORY_DIR=$TARGET bash $MEMKIT_ROOT/bin/serve"
+echo "  3. 建索引：python3 $MEMKIT_ROOT/brain/index.py"
+echo "  4. 起服务：bash $MEMKIT_ROOT/bin/serve"

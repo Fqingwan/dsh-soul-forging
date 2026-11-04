@@ -16,9 +16,10 @@ import tempfile
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
+DATA_ROOT = os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging")
+MEM = os.environ.get("MEMORY_DIR") or os.path.join(DATA_ROOT, "memory")
 TECH = os.environ.get("DOCS_DIR") or os.path.join(ROOT, "docs")
-BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(ROOT, "brain")
+BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(DATA_ROOT, "brain")
 LIVE = os.path.join(BRAIN, "live.jsonl")
 OUT = os.path.join(BRAIN, "entries.json")
 

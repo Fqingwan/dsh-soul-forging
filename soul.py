@@ -19,7 +19,8 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))  # soul.py 就在仓库根目录
-MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
+DATA_ROOT = os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging")
+MEM = os.environ.get("MEMORY_DIR") or os.path.join(DATA_ROOT, "memory")
 
 # 注入顺序就是重要性顺序：先是谁，再是什么规矩，再是目录，最后是此刻。
 PARTS = ("SOUL.md", "MEMORY.md", "index.md", "NOW.md")

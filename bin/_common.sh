@@ -6,8 +6,10 @@ set -uo pipefail
 # 直接按 $0 推上级会指到 node_modules/ 而不是包目录。必须先把链接解开。
 _SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
 MEMKIT_ROOT="$(cd "$(dirname "$_SELF")/.." && pwd)"
-export MEMORY_DIR="${MEMORY_DIR:-$MEMKIT_ROOT/memory}"
-export BRAIN_DIR="${BRAIN_DIR:-$MEMKIT_ROOT/brain}"
+# 数据放用户目录，不放 node_modules 里 —— 那里升级会被整个换掉，而且通常没写权限
+export SOUL_DATA_DIR="${SOUL_DATA_DIR:-$HOME/.soul-forging}"
+export MEMORY_DIR="${MEMORY_DIR:-$SOUL_DATA_DIR/memory}"
+export BRAIN_DIR="${BRAIN_DIR:-$SOUL_DATA_DIR/brain}"
 export DOCS_DIR="${DOCS_DIR:-$MEMKIT_ROOT/docs}"
 export BIN_DIR="$MEMKIT_ROOT/bin"
 export BRAIN_PORT="${BRAIN_PORT:-3914}"

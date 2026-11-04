@@ -28,7 +28,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(ROOT, "brain")
+DATA_ROOT = os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging")
+BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(DATA_ROOT, "brain")
 ENTRIES = os.path.join(BRAIN, "entries.json")
 STATE = os.path.join(BRAIN, "state.json")
 PORT = int(os.environ.get("BRAIN_PORT") or 3914)
