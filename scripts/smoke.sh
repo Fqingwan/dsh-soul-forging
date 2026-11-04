@@ -95,6 +95,7 @@ echo "== 5. 三种模式（不想改性格的人）=="
 export MEMORY_DIR="$TMP/mem2"
 "$BIN/soul-init" --memory-only >/dev/null 2>&1
 [ ! -f "$MEMORY_DIR/SOUL.md" ] && ok "memory-only 不生成 SOUL.md" || bad "memory-only 还是生成了 SOUL"
+grep -q "^status: skip" "$MEMORY_DIR/BOOTSTRAP.md" 2>/dev/null && ok "memory-only 把铸魂标成 skip" || bad "memory-only 铸魂还停在 pending（会反复催）"
 "$BIN/soul-boot" --mode memory-only --list 2>&1 | grep -q "不注入（模式）" && ok "memory-only 不注入 SOUL" || bad "memory-only 仍在注入 SOUL"
 # external：连 BOOTSTRAP 都不铺
 MEMORY_DIR="$TMP/mem3" "$BIN/soul-init" --external >/dev/null 2>&1

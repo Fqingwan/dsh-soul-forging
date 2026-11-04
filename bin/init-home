@@ -54,12 +54,16 @@ fi
 
 # 把铸魂清单标成 skip（memory-only 时），别每次开局催用户
 if [ "$MODE" = "memory-only" ] && [ -f "$TARGET/BOOTSTRAP.md" ]; then
-  sed -i 's/^status: pending$/status: skip/' "$TARGET/BOOTSTRAP.md" 2>/dev/null || \
-    python3 - "$TARGET/BOOTSTRAP.md" <<'PY' 2>/dev/null || true
+  # 行尾可能有注释，所以匹配整行而不是 ^status: pending$
+  python3 - "$TARGET/BOOTSTRAP.md" <<'PY'
 import re, sys
 p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-open(p, "w", encoding="utf-8").write(re.sub(r"^status: \w+$", "status: skip", s, count=1, flags=re.M))
+try:
+    s = open(p, encoding="utf-8").read()
+except OSError:
+    sys.exit(0)
+s = re.sub(r"^status:\s*\w+.*$", "status: skip", s, count=1, flags=re.M)
+open(p, "w", encoding="utf-8").write(s)
 PY
 fi
 
