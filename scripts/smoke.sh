@@ -90,15 +90,37 @@ run "soul-debug"     "$BIN/soul-debug"
 echo "== 4. 包目录必须干净（跑完所有命令之后查）=="
 DIRTY=$(check_pkg_clean) && ok "包目录没被写脏" || bad "包目录被污染：$DIRTY"
 
-echo "== 5. 插件加载 =="
+echo "== 5. 三种模式（不想改性格的人）=="
+# memory-only：不该生成 SOUL，注入里不该出现性格
+export MEMORY_DIR="$TMP/mem2"
+"$BIN/soul-init" --memory-only >/dev/null 2>&1
+[ ! -f "$MEMORY_DIR/SOUL.md" ] && ok "memory-only 不生成 SOUL.md" || bad "memory-only 还是生成了 SOUL"
+"$BIN/soul-boot" --mode memory-only --list 2>&1 | grep -q "不注入（模式）" && ok "memory-only 不注入 SOUL" || bad "memory-only 仍在注入 SOUL"
+# external：连 BOOTSTRAP 都不铺
+MEMORY_DIR="$TMP/mem3" "$BIN/soul-init" --external >/dev/null 2>&1
+[ ! -f "$TMP/mem3/BOOTSTRAP.md" ] && ok "external 不铺铸魂清单" || bad "external 还铺了 BOOTSTRAP"
+MEMORY_DIR="$TMP/mem3" "$BIN/soul-boot" --mode external 2>&1 | grep -q "记忆库还是空的" && ok "external 空库时不硬塞东西" || bad "external 空库仍注入了内容"
+# 空模板保护：没填的 SOUL 不许进上下文
+MEMORY_DIR="$TMP/mem2" "$BIN/soul-boot" --keep-empty 2>&1 | grep -q "（待填" && ok "占位符确实存在（对照）" || true
+MEMORY_DIR="$TMP/mem2" "$BIN/soul-boot" 2>&1 | grep -q "（待填" && bad "空模板被注入了" || ok "空 SOUL 不会进上下文"
+unset MEMORY_DIR
+
+echo "== 6. 插件加载 =="
+export MEMORY_DIR="$TMP/home/.soul-forging/memory"
 node -e "
 import('$PREFIX/lib/node_modules/dsh-soul-forging/lib/plugin.js').then(m=>{
-  let c; const ctx={systemPrompt:{context(o){c=o;return()=>{}}},skills:{register(){return()=>{}}},logger:{info(){},warn(){}}};
-  m.apply(ctx,{});
-  const t=c.text({});
+  const memoryDir = process.env.MEMORY_DIR;
+  let c;
+  const ctx = {systemPrompt:{context(o){c=o;return()=>{}}}, skills:{register(){return()=>{}}}, logger:{info(){},warn(){}}};
+  m.apply(ctx, memoryDir ? {memoryDir} : {});
+  const t = c.text({});
   if(typeof m.name!=='string') throw new Error('name 缺失');
   if(!Array.isArray(m.inject)) throw new Error('inject 缺失');
-  if(!t || t.length<1000) throw new Error('注入块太短: '+t.length);
+  if(!t || t.length<100) throw new Error('注入块太短: '+t.length);
+  const mm = m.bootBlock(memoryDir, 20000, { mode: 'memory-only' });
+  const ee = m.bootBlock(memoryDir, 20000, { mode: 'external' });
+  if(typeof mm!=='string' || typeof ee!=='string') throw new Error('模式参数不可用');
+  if(ee.includes('小蓝') && !t.includes('小蓝')) throw new Error('模式串了');
   console.log('OK '+t.length);
 }).catch(e=>{console.log('FAIL '+e.message);process.exit(1)})
 " >/tmp/smoke-plugin.out 2>&1

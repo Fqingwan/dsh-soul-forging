@@ -1,10 +1,24 @@
 #!/usr/bin/env bash
 # 把空白记忆库铺到用户目录（装成插件时用这个）
+#
+#   soul-init                 全套：记忆 + 性格模板（想长性格的人）
+#   soul-init --memory-only   只要记忆，不要性格：不生成 SOUL.md，铸魂清单标 skip
+#   soul-init --external      性格归你自己的 agent：连 BOOTSTRAP 都不铺
+#
 # 默认 $HOME/.soul-forging/memory，可用 MEMORY_DIR 覆盖
 set -uo pipefail
 _SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
 MEMKIT_ROOT="$(cd "$(dirname "$_SELF")/.." && pwd)"
 TARGET="${MEMORY_DIR:-$HOME/.soul-forging/memory}"
+
+MODE=full
+case "${1:-}" in
+  --memory-only) MODE=memory-only ;;
+  --external)    MODE=external ;;
+  "")            ;;
+  -h|--help)     sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) echo "不认识的参数：$1"; exit 1 ;;
+esac
 
 if [ -d "$TARGET" ] && [ -n "$(ls -A "$TARGET" 2>/dev/null)" ]; then
   echo "目标已存在且有内容：$TARGET"
@@ -16,10 +30,57 @@ mkdir -p "$TARGET"
 cp -a "$MEMKIT_ROOT/memory/." "$TARGET/"
 # 数据目录也建出来（索引和服务写这里，别写进包目录）
 mkdir -p "${BRAIN_DIR:-$(dirname "$TARGET")/brain}"
-echo "✓ 空白记忆库已铺到：$TARGET"
+
+if [ "$MODE" != "full" ]; then
+  # 不要性格：SOUL 是个空模板，留着只会让模型看到"我的名字是（待填）"
+  rm -f "$TARGET/SOUL.md"
+  cat > "$TARGET/SOUL-NOTE.md" <<'NOTE'
+# 关于 SOUL.md
+
+这个记忆库是按"不要性格"装的：**没有 SOUL.md**，注入时也不会带性格那一块。
+
+- 想只要记忆、不要性格 → 保持现状，`soul-boot` 默认用 `memory-only` 模式
+- 以后想长性格了 → 把 `BOOTSTRAP.md` 的状态改回 `pending`，跑 `soul-init --force-soul` 或手写一份 `SOUL.md`
+- 记忆本身照常工作，跟性格无关
+NOTE
+fi
+
+if [ "$MODE" = "external" ]; then
+  rm -f "$TARGET/BOOTSTRAP.md"
+  echo "--external" > "$TARGET/.mode"
+else
+  echo "$MODE" > "$TARGET/.mode"
+fi
+
+# 把铸魂清单标成 skip（memory-only 时），别每次开局催用户
+if [ "$MODE" = "memory-only" ] && [ -f "$TARGET/BOOTSTRAP.md" ]; then
+  sed -i 's/^status: pending$/status: skip/' "$TARGET/BOOTSTRAP.md" 2>/dev/null || \
+    python3 - "$TARGET/BOOTSTRAP.md" <<'PY' 2>/dev/null || true
+import re, sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+open(p, "w", encoding="utf-8").write(re.sub(r"^status: \w+$", "status: skip", s, count=1, flags=re.M))
+PY
+fi
+
+echo "✓ 空白记忆库已铺到：$TARGET（模式：$MODE）"
 echo
-echo "接下来："
-echo "  1. 填 $TARGET/SOUL.md"
-echo "  2. 按 $TARGET/BOOTSTRAP.md 走一遍铸魂"
-echo "  3. 建索引：python3 $MEMKIT_ROOT/brain/index.py"
-echo "  4. 起服务：bash $MEMKIT_ROOT/bin/serve"
+case "$MODE" in
+  full)
+    echo "接下来："
+    echo "  1. 填 $TARGET/SOUL.md"
+    echo "  2. 按 $TARGET/BOOTSTRAP.md 走一遍铸魂"
+    ;;
+  memory-only)
+    echo "接下来：直接开始记东西就行，不用管性格。"
+    echo "  · 注入会自动跳过空的 SOUL"
+    echo "  · 想改主意：把 $TARGET/BOOTSTRAP.md 的 status 改回 pending"
+    ;;
+  external)
+    echo "接下来：性格由你自己的 agent prompt 负责，这里只管记忆。"
+    echo "  · 注入只有 index.md + NOW.md"
+    ;;
+esac
+echo "  · 建索引：python3 $MEMKIT_ROOT/brain/index.py"
+echo "  · 起服务：bash $MEMKIT_ROOT/bin/serve"
+echo "  · 看注入：soul-boot --list"

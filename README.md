@@ -147,6 +147,37 @@ soul-sync                         # 补摘要 → 瘦身 → 建索引 → 重�
 
 ---
 
+## 三种人，三条路
+
+不是每个人都要一个"有性格的 AI"。所以装的时候可以选：
+
+```bash
+soul-init                  # 全套：记忆 + 性格模板（想长性格的人）
+soul-init --memory-only    # 只要记忆，不要性格
+soul-init --external       # 性格归你自己的 agent，我们只管记忆
+```
+
+| 模式 | 注入什么 | 适合谁 |
+|---|---|---|
+| `full` | SOUL + MEMORY + index + NOW | 想从零长出一个性格 |
+| `memory-only` | MEMORY + index + NOW | 只想让它记得住，不想动它的人设 |
+| `external` | index + NOW | 你的 agent 已经有自己的 prompt/人设了 |
+
+对应地，`soul-boot` 也能选：
+
+```bash
+soul-boot --mode memory-only
+soul-boot --with index.md,NOW.md      # 更细：自己挑文件
+```
+
+**空模板永远不会被注入。** 没填的 SOUL 里全是「（待填）」，塞进上下文比不塞更糟——
+模型会一本正经地介绍"我的名字是（待填）"。所以只要某页的占位符超过 3 处，就自动跳过。
+`--keep-empty` 可以强制保留（调试用）。
+
+铸魂清单也有 `status: skip`：用户明确说了不要性格，就别每次开局问他"你叫什么名字"。
+
+---
+
 ## 铸魂
 
 装完的第一件事不是干活，是**先把"我是谁"聊清楚**。
