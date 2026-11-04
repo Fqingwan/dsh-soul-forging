@@ -12,7 +12,7 @@
 """
 import os, shutil, subprocess, sys, tarfile, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
-from memkit_lib import MEM, BRAIN
+from soul_lib import MEM, BRAIN
 
 SNAP = os.path.join(BRAIN, "snapshots")
 
@@ -52,7 +52,7 @@ def diff(idx):
     fs = sorted(f for f in os.listdir(SNAP) if f.endswith(".tgz")) if os.path.isdir(SNAP) else []
     i = int(idx)
     if not fs or not (0 <= i < len(fs)): print("编号不对"); return 1
-    tmp = "/tmp/memkit-diff"
+    tmp = "/tmp/soul-forging-diff"
     shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
     with tarfile.open(os.path.join(SNAP, fs[i])) as t: t.extractall(tmp)
     a, b = os.path.join(tmp, "memory"), MEM

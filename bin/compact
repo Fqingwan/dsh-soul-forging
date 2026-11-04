@@ -15,7 +15,7 @@
 """
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
-from memkit_lib import MEM, BRAIN, LIVE, atomic_write
+from soul_lib import MEM, BRAIN, LIVE, atomic_write
 
 BUDGET_DEFAULT = 20000
 INJECTED = ["SOUL.md", "MEMORY.md", "index.md", "NOW.md"]

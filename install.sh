@@ -42,7 +42,7 @@ cat <<EOF
 == 装好了（命令行模式）==
 
 想当 DSH 插件用（记忆自动注入）：
-  bash bin/init-home           # 铺一份空白记忆库到 ~/.memkit/memory
+  bash bin/init-home           # 铺一份空白记忆库到 ~/.soul-forging/memory
   dsh plugin add $(pwd)        # 装进 profile，重开 DSH 即生效
 
 
@@ -54,8 +54,8 @@ cat <<EOF
 常用命令：
   brain "关键词"                 查记忆小脑
   brain --topics                 看有哪些分类
-  bin/kit-memory write "内容"    记一条运行期记忆
-  bin/kit-memory check           体检
+  bin/soul write "内容"    记一条运行期记忆
+  bin/soul check           体检
   bin/sync                       一键同步（建索引 + 重载 + 体检）
   debug-recall "报错"            查调试旧账
 

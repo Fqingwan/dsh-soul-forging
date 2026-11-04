@@ -10,7 +10,7 @@
 """
 import os, subprocess, sys, tarfile, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
-from memkit_lib import DOCS
+from soul_lib import DOCS
 
 DBG = os.path.join(DOCS, "debug")
 IDX = os.path.join(DBG, "INDEX.md")

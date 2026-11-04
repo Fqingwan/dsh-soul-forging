@@ -43,7 +43,7 @@ status: pending
 3. 写回文件之后才勾选，顺序不能反。
 4. 全部完成 →
    - 把本文件 `status` 改成 `complete`
-   - 跑一次 `bash bin/kit-memory index --write` 生成 `index.md`
+   - 跑一次 `bash bin/soul index --write` 生成 `index.md`
    - 在 `log.md` 记一条「铸魂完成」
    - 在 `NOW.md` 写下此刻
 

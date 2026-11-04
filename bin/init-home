@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # 把空白记忆库铺到用户目录（装成插件时用这个）
-# 默认 $HOME/.memkit/memory，可用 MEMORY_DIR 覆盖
+# 默认 $HOME/.soul-forging/memory，可用 MEMORY_DIR 覆盖
 set -uo pipefail
 MEMKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET="${MEMORY_DIR:-$HOME/.memkit/memory}"
+TARGET="${MEMORY_DIR:-$HOME/.soul-forging/memory}"
 
 if [ -d "$TARGET" ] && [ -n "$(ls -A "$TARGET" 2>/dev/null)" ]; then
   echo "目标已存在且有内容：$TARGET"

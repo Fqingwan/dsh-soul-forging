@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""接线层：把记忆库接进任何 agent。
+"""接线层：把记忆库接进任何 agent（dsh-soul-forging）。
 
 两种用法：
 
   ① 命令行（最简单，任何语言都能调）
-       kit-boot                打印开局注入块
-       kit-boot --budget 12000 限制字数（超了从末尾截）
-       kit-boot --list         看各部分多长
+       soul-boot                打印开局注入块
+       soul-boot --budget 12000 限制字数（超了从末尾截）
+       soul-boot --list         看各部分多长
 
   ② 当模块用（Python）
        from kit import boot, recall, remember
@@ -18,7 +18,7 @@
 import os
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))  # kit.py 就在仓库根目录
+ROOT = os.path.dirname(os.path.abspath(__file__))  # soul.py 就在仓库根目录
 MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
 
 # 注入顺序就是重要性顺序：先是谁，再是什么规矩，再是目录，最后是此刻。
@@ -78,7 +78,7 @@ def recall(q, n=5):
 def remember(text, **kw):
     """记一条运行期记忆。kw 支持 kind/section/summary/salience。"""
     import subprocess
-    args = [sys.executable, os.path.join(ROOT, "bin", "kit-memory"), "write", str(text)]
+    args = [sys.executable, os.path.join(ROOT, "bin", "soul"), "write", str(text)]
     for k in ("kind", "section", "summary", "salience"):
         if k in kw:
             args += [f"--{k}", str(kw[k])]

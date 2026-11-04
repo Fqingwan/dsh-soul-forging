@@ -3,7 +3,7 @@
 #   补摘要 → 时间线瘦身 → 建索引 → 通知服务 → 体检 →（可选）备份
 # 一步失败不挡后面——每步都记进 cron-run.log，失败的另外写 alarm.log。
 source "$(dirname "$0")/_common.sh"
-LOCK=/tmp/memkit-sync.lock
+LOCK=/tmp/soul-sync.lock
 exec 9>"$LOCK"
 if ! flock -n 9; then echo "同步已在运行，跳过"; exit 0; fi
 
@@ -12,8 +12,8 @@ $R "live-summary" -- "$PY" "$BRAIN_DIR/fix-live-summary.py"                  || 
 $R "archive-log"  -- "$BIN_DIR/archive-log"                                  || rc=$((rc+2))
 $R "index"        -- "$PY" "$BRAIN_DIR/index.py"                             || rc=$((rc+4))
 $R "reload"       -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+8))
-$R "check"        -- "$BIN_DIR/kit-memory" check                             || rc=$((rc+16))
-[ -n "${MEMKIT_BACKUP_CMD:-}" ] && { $R "backup" -- bash -c "$MEMKIT_BACKUP_CMD" || rc=$((rc+32)); }
+$R "check"        -- "$BIN_DIR/soul" check                             || rc=$((rc+16))
+[ -n "${SOUL_BACKUP_CMD:-}" ] && { $R "backup" -- bash -c "$SOUL_BACKUP_CMD" || rc=$((rc+32)); }
 
 if [ $rc -eq 0 ]; then echo "sync ok"; else echo "sync 有失败项 rc=$rc（看 $BRAIN_DIR/alarm.log）"; fi
 exit 0

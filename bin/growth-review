@@ -9,7 +9,7 @@
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
-from memkit_lib import MEM
+from soul_lib import MEM
 
 def main():
     n = 20

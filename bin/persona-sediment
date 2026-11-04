@@ -14,7 +14,7 @@
 """
 import os, re, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "brain"))
-from memkit_lib import MEM, atomic_write
+from soul_lib import MEM, atomic_write
 
 def read(p):
     try: return open(p, encoding="utf-8").read()

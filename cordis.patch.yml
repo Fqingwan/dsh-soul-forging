@@ -1,10 +1,10 @@
-# dsh-memkit 的 bundle 层。
+# dsh-soul-forging 的 bundle 层。
 #
 # package.json 里的 `dsh.bundle.patch` 指向本文件，
-# 所以 `dsh plugin add dsh-memkit` 会自动挂上这个 insert。
+# 所以 `dsh plugin add dsh-soul-forging` 会自动挂上这个 insert。
 #
 # 用户级配置（memoryDir / bootMaxChars / autoInject / registerSkill）
-# 可以在 profile 的配置里覆盖。
+# 可以在 profile 里覆盖。
 - insert:
-    - id: memkit
-      name: dsh-memkit
+    - id: soul-forging
+      name: dsh-soul-forging

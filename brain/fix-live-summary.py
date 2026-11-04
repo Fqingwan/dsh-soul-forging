@@ -7,7 +7,7 @@
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from memkit_lib import LIVE, derive_summary, atomic_write
+from soul_lib import LIVE, derive_summary, atomic_write
 
 def main():
     dry = "--dry" in sys.argv

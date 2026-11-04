@@ -1,7 +1,7 @@
 {
-  "name": "dsh-memkit",
+  "name": "dsh-soul-forging",
   "version": "0.1.0",
-  "description": "可迁移的长期记忆套件：markdown 记忆库 + 小脑检索 + 铸魂流程。纯本地，不需要服务器。",
+  "description": "Separate Vessels, One Heart · 异体同心 —— 给 AI 的可迁移长期记忆与铸魂流程：markdown 记忆库 + 小脑检索 + 能长出来的性格。纯本地，不要服务器。",
   "license": "MIT",
   "type": "module",
   "main": "lib/plugin.js",
@@ -10,28 +10,28 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "memkit": "./bin/kit-memory",
-    "memkit-boot": "./bin/kit-boot",
-    "memkit-sync": "./bin/sync",
-    "memkit-serve": "./bin/serve",
-    "memkit-recall": "./bin/brain",
-    "memkit-init": "./bin/init-home",
-    "memkit-forget": "./bin/brain-forget",
-    "memkit-compact": "./bin/compact",
-    "memkit-snapshot": "./bin/mem-snapshot",
-    "memkit-peer": "./bin/kit-peer",
-    "memkit-debug": "./bin/debug-archive"
+    "soul": "./bin/soul",
+    "soul-boot": "./bin/soul-boot",
+    "soul-sync": "./bin/sync",
+    "soul-serve": "./bin/serve",
+    "soul-recall": "./bin/brain",
+    "soul-init": "./bin/init-home",
+    "soul-forget": "./bin/brain-forget",
+    "soul-compact": "./bin/compact",
+    "soul-snapshot": "./bin/mem-snapshot",
+    "soul-peer": "./bin/soul-peer",
+    "soul-debug": "./bin/debug-archive"
   },
   "files": [
     "lib",
     "bin",
     "brain/index.py",
     "brain/server.py",
-    "brain/memkit_lib.py",
+    "brain/soul_lib.py",
     "brain/fix-live-summary.py",
     "memory",
     "docs",
-    "kit.py",
+    "soul.py",
     "cordis.patch.yml",
     "install.sh",
     "README.md",
@@ -50,8 +50,17 @@
     "dsh",
     "dsh-plugin",
     "memory",
+    "soul",
+    "persona",
     "markdown",
     "llm",
-    "agent"
-  ]
+    "agent",
+    "long-term-memory"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
