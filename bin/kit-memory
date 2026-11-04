@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""记忆库命令行。
+
+  kit-memory write "内容" [--kind chat] [--section 小标题] [--summary 一句话]
+        写一条进小脑（运行期记忆，进 brain/live.jsonl）
+
+  kit-memory index            重建索引并通知服务重载
+  kit-memory check            体检：漏登记/摘要缺失/断链/死页
+  kit-memory digest           打印收尾该做的事
+
+摘要规则（和主程序保持一致）：
+  ≤120 字直接用原文；长文取第一句（到 。！？ 为止）；再长截断加 …
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MEM = os.environ.get("MEMORY_DIR") or os.path.join(ROOT, "memory")
+BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(ROOT, "brain")
+DOCS = os.environ.get("DOCS_DIR") or os.path.join(ROOT, "docs")
+LIVE = os.path.join(BRAIN, "live.jsonl")
+PORT = os.environ.get("BRAIN_PORT") or "3914"
+
+
+def derive_summary(text):
+    t = re.sub(r"\s+", " ", text or "").strip()
+    if not t:
+        return ""
+    if len(t) <= 120:
+        return t
+    m = re.search(r"[^。！？]*[。！？]", t)
+    s = m.group(0) if m and 12 <= len(m.group(0)) <= 120 else t[:120]
+    return s if len(s) <= 120 else s[:119] + "…"
+
+
+def cmd_write(args):
+    text = args[0] if args else ""
+    if len(text.strip()) < 4:
+        print("太短了，写点实在的", file=sys.stderr)
+        return 2
+    opts = {"kind": "chat", "section": "", "summary": "", "salience": "2"}
+    i = 1
+    while i < len(args) - 1:
+        k = args[i]
+        if k in ("--kind", "--section", "--summary", "--salience"):
+            opts[k[2:]] = args[i + 1]
+            i += 2
+        else:
+            i += 1
+    rec = {
+        "id": f"{int(time.time()*1000):x}",
+        "text": text.strip(),
+        "summary": opts["summary"] or derive_summary(text),
+        "kind": opts["kind"],
+        "section": opts["section"],
+        "salience": int(opts["salience"] or 2),
+        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    os.makedirs(BRAIN, exist_ok=True)
+    with open(LIVE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    print(f"已记下：{rec['summary'][:60]}")
+    return 0
+
+
+def cmd_index():
+    rc = subprocess.call([sys.executable, os.path.join(BRAIN, "index.py")])
+    if rc != 0:
+        return rc
+    try:
+        import urllib.request
+        urllib.request.urlopen(
+            urllib.request.Request(f"http://127.0.0.1:{PORT}/reload", data=b"", method="POST"),
+            timeout=3)
+        print("服务已重载")
+    except Exception:
+        print("服务没起（不影响，检索时会自动现算）")
+    return 0
+
+
+def cmd_check():
+    sys.path.insert(0, DOCS)
+    problems = []
+    pages, index = [], ""
+    try:
+        index = open(os.path.join(MEM, "index.md"), encoding="utf-8").read()
+    except OSError:
+        problems.append("index.md 不存在")
+
+    for root, dirs, files in os.walk(MEM):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for fn in files:
+            if not fn.endswith(".md") or fn == "index.md":
+                continue
+            # 根文件是「每轮注入」的那几页，不走路由，不需要 frontmatter
+            if fn in ("README.md", "SOUL.md", "MEMORY.md", "NOW.md", "log.md",
+                      "log-archive.md", "NOW-archive.md", "BOOTSTRAP.md", "MEMORY-schema.md"):
+                continue
+            p = os.path.join(root, fn)
+            rel = os.path.relpath(p, MEM)
+            pages.append(rel)
+            txt = open(p, encoding="utf-8").read()
+            m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
+            if not m:
+                problems.append(f"缺 frontmatter：{rel}")
+                continue
+            meta = dict(l.split(":", 1) for l in m.group(1).split("\n") if ":" in l)
+            if "summary" not in meta:
+                problems.append(f"缺 summary：{rel}")
+            if "salience" not in meta and rel not in ("log.md", "log-archive.md"):
+                problems.append(f"缺 salience：{rel}")
+            if fn not in index and rel not in index:
+                problems.append(f"漏登记：{rel}")
+
+    # 断链
+    for link in re.findall(r"\]\(([^)#]+\.md)\)", index):
+        if not os.path.exists(os.path.join(MEM, link)):
+            problems.append(f"断链：{link}")
+
+    if problems:
+        print(f"发现 {len(problems)} 处问题（{len(pages)} 页）")
+        for p in problems[:40]:
+            print("  ·", p)
+        return 1
+    print(f"✓ 干净：{len(pages)} 页，无问题")
+    return 0
+
+
+def cmd_digest():
+    print("""收尾要做四件：
+  1. 写页面（remember：读源 → 建/改页 → 补互链）
+  2. 改 index.md（路由表）
+  3. append log.md（记一条：发生了什么 + 为什么）
+  4. 刷新 NOW.md 的三节 + 顶部时间
+最后跑：bash bin/sync""")
+    return 0
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 1
+    cmd, args = sys.argv[1], sys.argv[2:]
+    if cmd == "write":
+        return cmd_write(args)
+    if cmd == "index":
+        return cmd_index()
+    if cmd == "check":
+        return cmd_check()
+    if cmd == "digest":
+        return cmd_digest()
+    print(__doc__)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

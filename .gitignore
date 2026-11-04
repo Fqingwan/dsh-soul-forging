@@ -1,0 +1,16 @@
+# 索引与运行态：可以重建，不用提交
+brain/entries.json
+brain/state.json
+brain/*.log
+brain/live.jsonl
+brain/*.tmp
+
+# 记忆内容：要不要提交自己决定。
+# 默认**不提交**——那是私事。想版本管理就把下面三行注释掉。
+# memory/
+# docs/debug/
+
+# 杂项
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# 查小脑：brain "关键词" [条数]
+# 先走常驻服务（毫秒级），服务没起就本地现算。
+source "$(dirname "$0")/_common.sh"
+Q="${1:-}"; N="${2:-5}"
+[ -z "$Q" ] && { echo "用法：brain \"关键词\" [条数]"; echo "      brain --topics"; exit 1; }
+
+if [ "$Q" = "--topics" ]; then
+  curl -s -m 3 "$BRAIN_URL/topics" && exit 0
+  echo "（服务没起，先跑 bash bin/sync 或 bash bin/serve）"; exit 1
+fi
+
+# 中文必须 percent-encode 后再进请求行，否则服务端按 latin-1 解出乱码
+QENC=$("$PY" -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$Q")
+OUT=$(curl -s -m 5 "$BRAIN_URL/text?q=$QENC&n=$N" 2>/dev/null)
+if [ -z "$OUT" ] || echo "$OUT" | grep -q "Connection refused"; then
+  OUT=$("$PY" "$BRAIN_DIR/server.py" --query "$Q" -n "$N" 2>/dev/null)
+fi
+printf '%s\n' "$OUT"

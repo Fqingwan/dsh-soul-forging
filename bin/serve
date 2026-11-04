@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# 起小脑检索服务（常驻）。已经在跑就不再起。
+source "$(dirname "$0")/_common.sh"
+if curl -s -m 2 "$BRAIN_URL/health" | grep -q '"ok": true'; then
+  echo "已在跑：$BRAIN_URL"; exit 0
+fi
+mkdir -p "$BRAIN_DIR"
+nohup "$PY" "$BRAIN_DIR/server.py" >"$BRAIN_DIR/server.log" 2>&1 &
+sleep 1
+curl -s -m 2 "$BRAIN_URL/health" || { echo "起不来，看 $BRAIN_DIR/server.log"; exit 1; }
+echo
+echo "已启动：$BRAIN_URL"

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# 跑一条命令，留下痕迹。失败才写告警，成功只记一行。
+# 用法: runlog <名字> -- <命令...>
+source "$(dirname "$0")/_common.sh"
+NAME="${1:-task}"; shift || true
+[ "${1:-}" = "--" ] && shift
+LOG="$BRAIN_DIR/cron-run.log"; ALARM="$BRAIN_DIR/alarm.log"
+mkdir -p "$BRAIN_DIR"
+T0=$(date +%s%3N)
+OUT=$("$@" 2>&1); RC=$?
+T1=$(date +%s%3N); MS=$((T1-T0))
+printf '[%s] %-4s %-16s %sms  %s\n' "$(date '+%F %T')" \
+  "$([ $RC -eq 0 ] && echo OK || echo FAIL)" "$NAME" "$MS" "$(printf '%s' "$OUT" | head -1 | cut -c1-120)" >> "$LOG"
+if [ $RC -ne 0 ]; then
+  printf '[%s] 【告警】%s 失败 rc=%s :: %s\n' "$(date '+%F %T')" "$NAME" "$RC" "$(printf '%s' "$OUT" | head -3 | tr '\n' ' ' | cut -c1-300)" >> "$ALARM"
+fi
+printf '%s\n' "$OUT"
+exit $RC
