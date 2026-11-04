@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 # 开局注入块：给任何 agent 用。把它拼到 system prompt 最前面就行。
-exec "$(command -v python3)" "$(dirname "$0")/../soul.py" "$@"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+exec "$(command -v python3)" "$(dirname "$_SELF")/../soul.py" "$@"

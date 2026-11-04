@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 起小脑检索服务（常驻）。已经在跑就不再起。
-source "$(dirname "$0")/_common.sh"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
 if curl -s -m 2 "$BRAIN_URL/health" | grep -q '"ok": true'; then
   echo "已在跑：$BRAIN_URL"; exit 0
 fi

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 查小脑：brain "关键词" [条数]
 # 先走常驻服务（毫秒级），服务没起就本地现算。
-source "$(dirname "$0")/_common.sh"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
 Q="${1:-}"; N="${2:-5}"
 [ -z "$Q" ] && { echo "用法：brain \"关键词\" [条数]"; echo "      brain --topics"; exit 1; }
 

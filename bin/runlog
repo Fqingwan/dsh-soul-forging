@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 跑一条命令，留下痕迹。失败才写告警，成功只记一行。
 # 用法: runlog <名字> -- <命令...>
-source "$(dirname "$0")/_common.sh"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
 NAME="${1:-task}"; shift || true
 [ "${1:-}" = "--" ] && shift
 LOG="$BRAIN_DIR/cron-run.log"; ALARM="$BRAIN_DIR/alarm.log"

@@ -2,7 +2,8 @@
 # 记忆链路一键同步（纯本地）：
 #   补摘要 → 时间线瘦身 → 建索引 → 通知服务 → 体检 →（可选）备份
 # 一步失败不挡后面——每步都记进 cron-run.log，失败的另外写 alarm.log。
-source "$(dirname "$0")/_common.sh"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
 LOCK=/tmp/soul-sync.lock
 exec 9>"$LOCK"
 if ! flock -n 9; then echo "同步已在运行，跳过"; exit 0; fi

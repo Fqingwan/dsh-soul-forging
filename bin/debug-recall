@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 查调试旧账：debug-recall "报错关键词"
 # 遇到报错先查这里，别重新走一遍弯路。
-source "$(dirname "$0")/_common.sh"
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
 Q="${1:-}"
 IDX="$DOCS_DIR/debug/INDEX.md"
 [ -z "$Q" ] && { echo "用法：debug-recall \"关键词\""; echo "      debug-recall --list"; exit 1; }
