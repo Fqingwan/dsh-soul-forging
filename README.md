@@ -53,6 +53,39 @@ bash bin/serve                  # 起常驻检索服务（可选）
 
 ---
 
+## 接进你的 agent（接线层）
+
+这套东西不会自己长在模型身上——**你得在每轮开头把记忆喂进去**。三种接法：
+
+**① 命令行（任何语言都能调）**
+
+```bash
+kit-boot                 # 打印开局注入块，拼到 system prompt 最前面
+kit-boot --budget 12000  # 限制字数（超了从末尾截，先保 SOUL）
+kit-boot --list          # 看四个文件各多长
+```
+
+**② Python 模块**
+
+```python
+from kit import boot, recall, remember
+
+system_prompt = "你是一个助手…\n\n" + boot()      # 开局注入
+context       = recall("他说过在意什么", n=3)      # 想起来了就查
+remember("今天他说想换个方向", kind="chat")        # 记一条
+```
+
+**③ 直接读文件**
+
+就是四个 markdown：`SOUL.md` `MEMORY.md` `index.md` `NOW.md`。
+想自己控制格式就自己拼，效果一样。
+
+> **注意**：`boot()` 只管注入，**不改任何文件**。要写记忆走 `remember()`。
+> 注入块默认 3.4K 字左右——这就是"每轮要花的固定开销"，觉得贵就调 `--budget`，
+> 或者定期把四个文件压瘦。
+
+---
+
 ## 目录
 
 ```

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# 开局注入块：给任何 agent 用。把它拼到 system prompt 最前面就行。
+exec "$(command -v python3)" "$(dirname "$0")/../kit.py" "$@"
