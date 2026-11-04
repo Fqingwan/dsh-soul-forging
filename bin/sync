@@ -10,10 +10,15 @@ if ! flock -n 9; then echo "同步已在运行，跳过"; exit 0; fi
 
 R() { bash "$BIN_DIR/runlog" "$@"; }; rc=0
 bash "$BIN_DIR/runlog" "live-summary" -- "$PY" "$MEMKIT_ROOT/brain/fix-live-summary.py"                  || rc=$((rc+1))
-bash "$BIN_DIR/runlog" "archive-log" -- bash "$BIN_DIR/archive-log"                                  || rc=$((rc+2))
+bash "$BIN_DIR/runlog" "archive-log" -- "$PY" "$BIN_DIR/archive-log"                                  || rc=$((rc+2))
 bash "$BIN_DIR/runlog" "index" -- "$PY" "$MEMKIT_ROOT/brain/index.py"                             || rc=$((rc+4))
-bash "$BIN_DIR/runlog" "reload" -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+8))
-bash "$BIN_DIR/runlog" "check" -- bash "$BIN_DIR/soul" check                             || rc=$((rc+16))
+# 服务没起就不算失败 —— 用户不一定要常驻它，检索会自己现算
+if curl -s -m 2 "$BRAIN_URL/health" 2>/dev/null | grep -q '"ok"'; then
+  bash "$BIN_DIR/runlog" "reload" -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+8))
+else
+  echo "（检索服务没起，跳过重载——不影响使用）"
+fi
+bash "$BIN_DIR/runlog" "check" -- "$PY" "$BIN_DIR/soul" check                             || rc=$((rc+16))
 [ -n "${SOUL_BACKUP_CMD:-}" ] && { bash "$BIN_DIR/runlog" "backup" -- bash -c "$SOUL_BACKUP_CMD" || rc=$((rc+32)); }
 
 if [ $rc -eq 0 ]; then echo "sync ok"; else echo "sync 有失败项 rc=$rc（看 $BRAIN_DIR/alarm.log）"; fi

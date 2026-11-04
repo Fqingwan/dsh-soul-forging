@@ -58,9 +58,16 @@ run() { # 名字 命令...
 
 run "soul-init"      "$BIN/soul-init"
 run "soul-boot"      "$BIN/soul-boot" --list
-run "soul-sync"      "$BIN/soul-sync"
+# sync 永远 exit 0（失败也返回 0，只是打印"有失败项"），所以必须看输出
+sync_ok() {
+  local out; out=$("$BIN/soul-sync" 2>&1)
+  echo "$out" | grep -q "^sync ok$" && ok "soul-sync（干净）" && return 0
+  bad "soul-sync 有失败项" "$(echo "$out" | grep -E '失败' | head -1)"
+  return 1
+}
+sync_ok
 run "soul (write)"   "$BIN/soul" write "烟测写的一条"
-run "soul-sync 2"    "$BIN/soul-sync"
+sync_ok
 run "soul-recall"    "$BIN/soul-recall" "烟测" 1
 echo "$LAST_OUT" | grep -q "烟测写的一条" && ok "检索命中刚写的内容" || bad "检索没命中"
 
@@ -69,7 +76,7 @@ PORT=$(( (RANDOM % 2000) + 39000 ))
 BRAIN_PORT=$PORT "$BIN/soul-serve" >/dev/null 2>&1
 sleep 1
 curl -s -m 3 "http://127.0.0.1:$PORT/health" | grep -q '"ok": true' && ok "soul-serve 起得来" || bad "soul-serve"
-BRAIN_PORT=$PORT "$BIN/soul-sync" >/dev/null 2>&1 && ok "sync（服务在跑时）" || bad "sync（服务在跑时）"
+BRAIN_PORT=$PORT "$BIN/soul-sync" 2>&1 | grep -q "^sync ok$" && ok "sync（服务在跑时）" || bad "sync（服务在跑时）"
 
 run "soul-check"     "$BIN/soul" check
 run "soul-forget"    "$BIN/soul-forget"
