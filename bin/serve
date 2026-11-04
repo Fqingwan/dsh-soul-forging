@@ -6,7 +6,7 @@ if curl -s -m 2 "$BRAIN_URL/health" | grep -q '"ok": true'; then
   echo "已在跑：$BRAIN_URL"; exit 0
 fi
 mkdir -p "$BRAIN_DIR"
-nohup "$PY" "$BRAIN_DIR/server.py" >"$BRAIN_DIR/server.log" 2>&1 &
+nohup "$PY" "$MEMKIT_ROOT/brain/server.py" >"$BRAIN_DIR/server.log" 2>&1 &
 sleep 1
 curl -s -m 2 "$BRAIN_URL/health" || { echo "起不来，看 $BRAIN_DIR/server.log"; exit 1; }
 echo

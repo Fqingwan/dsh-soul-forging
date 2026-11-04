@@ -15,6 +15,6 @@ fi
 QENC=$("$PY" -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$Q")
 OUT=$(curl -s -m 5 "$BRAIN_URL/text?q=$QENC&n=$N" 2>/dev/null)
 if [ -z "$OUT" ] || echo "$OUT" | grep -q "Connection refused"; then
-  OUT=$("$PY" "$BRAIN_DIR/server.py" --query "$Q" -n "$N" 2>/dev/null)
+  OUT=$("$PY" "$MEMKIT_ROOT/brain/server.py" --query "$Q" -n "$N" 2>/dev/null)
 fi
 printf '%s\n' "$OUT"

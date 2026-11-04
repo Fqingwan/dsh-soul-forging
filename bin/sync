@@ -9,9 +9,9 @@ exec 9>"$LOCK"
 if ! flock -n 9; then echo "同步已在运行，跳过"; exit 0; fi
 
 R="$BIN_DIR/runlog"; rc=0
-$R "live-summary" -- "$PY" "$BRAIN_DIR/fix-live-summary.py"                  || rc=$((rc+1))
+$R "live-summary" -- "$PY" "$MEMKIT_ROOT/brain/fix-live-summary.py"                  || rc=$((rc+1))
 $R "archive-log"  -- "$BIN_DIR/archive-log"                                  || rc=$((rc+2))
-$R "index"        -- "$PY" "$BRAIN_DIR/index.py"                             || rc=$((rc+4))
+$R "index"        -- "$PY" "$MEMKIT_ROOT/brain/index.py"                             || rc=$((rc+4))
 $R "reload"       -- bash -c "curl -s -m 5 -X POST $BRAIN_URL/reload >/dev/null" || rc=$((rc+8))
 $R "check"        -- "$BIN_DIR/soul" check                             || rc=$((rc+16))
 [ -n "${SOUL_BACKUP_CMD:-}" ] && { $R "backup" -- bash -c "$SOUL_BACKUP_CMD" || rc=$((rc+32)); }
