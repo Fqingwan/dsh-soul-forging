@@ -51,10 +51,23 @@ PLACEHOLDER_MIN = 3
 
 
 def _read(name):
+    """读一页。**读不了就当没有** —— 不能因为一个文件坏了，整次注入都崩。
+
+    2026-11-06 进阶烟测抓到的：旧版记忆库里有非 UTF-8 的文件（GBK 存过、
+    或者写到一半被截断），`open(..., encoding="utf-8")` 直接抛 UnicodeDecodeError，
+    而这里原来只接了 OSError —— 于是整次启动崩在栈里，用户看到的是一堆 traceback。
+    现在：解码失败就用 errors="replace" 硬读，坏字节变成替换符，页面的其余部分照样能用。
+    """
     p = os.path.join(MEM, name)
     try:
         with open(p, encoding="utf-8") as f:
             return f.read().strip()
+    except UnicodeDecodeError:
+        try:
+            with open(p, encoding="utf-8", errors="replace") as f:
+                return f.read().strip()
+        except OSError:
+            return ""
     except OSError:
         return ""
 
@@ -158,7 +171,17 @@ def remember(text, **kw):
 def _main(argv):
     budget = None
     if "--budget" in argv:
-        budget = int(argv[argv.index("--budget") + 1])
+        # 2026-11-06：`--budget abc` 原来直接 ValueError 崩掉。
+        # 参数写错是人的事，工具不该退出一堆栈 —— 说不清楚就当没限制，并说明白。
+        _raw = argv[argv.index("--budget") + 1] if argv.index("--budget") + 1 < len(argv) else ""
+        try:
+            budget = int(_raw)
+        except ValueError:
+            print(f"（--budget 要一个整数，收到的是「{_raw}」，这次按不限制处理）", file=sys.stderr)
+            budget = None
+        if budget is not None and budget < 0:
+            print(f"（--budget 不能是负数，收到 {budget}，这次按 0 处理）", file=sys.stderr)
+            budget = 0
     mode = None
     if "--mode" in argv:
         mode = argv[argv.index("--mode") + 1]
