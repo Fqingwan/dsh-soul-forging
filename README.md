@@ -148,16 +148,26 @@ soul-recall --topics              # 看有哪些分类
 soul digest                       # 收尾该做哪四步
 
 # 养
-brain/fix-live-summary.py         # 补摘要（缺摘要 = 只记得"有这么回事"）
-archive-log                       # 时间线瘦身（老的进 archive，照样搜得到）
 soul-compact                      # 预算体检：注入层多大、该压哪
-persona-sediment                  # 性格沉淀：攒够了提示回炼进底色
-growth-review                     # 叙事回炼：碎片连成「我这一路」
+soul-archive                      # 时间线瘦身（老的进 archive，照样搜得到）
+soul-sediment                     # 性格沉淀：攒够了提示回炼进注释层
+soul-review                       # 叙事回炼：碎片连成「我这一路」
 
 # 忘
 soul-forget                       # 报告该忘了哪些（按强度衰减）
 soul-forget --apply               # 真标记（**不删原文**）
 soul-forget --restore <id>        # 找回，并钉住
+
+# 忘（两种，别搞混）
+soul-forget                       # 只摘检索索引，原文还在盘上（「不想被翻到」）
+soul-forget --restore <id>        # 找回，并钉住
+soul-purge "关键词"               # 预演：真删哪些行
+soul-purge "关键词" --apply       # 真删 + 重生 git（「忘了」）
+
+# 排查
+soul-debug                        # 归档一次调试记录（问题 → 怎么做的 → 结果）
+soul-debug-recall "关键词"        # 翻以前的调试档案
+soul-debug-detail <文件名>        # 看某份档案全文
 
 # 保底
 soul-snapshot save "说明"         # 存一卷
@@ -166,8 +176,14 @@ soul-snapshot ls / restore / diff
 # 双端
 soul-peer export | import / pull / push
 
-# 收尾
+# 服务与收尾
+soul-serve                        # 起检索服务（默认 127.0.0.1:3013）
 soul-sync                         # 补摘要 → 瘦身 → 建索引 → 重载 → 体检
+
+# 养（不挂 bin，直接跑）
+brain/fix-live-summary.py         # 补摘要（缺摘要 = 只记得"有这么回事"）
+persona-sediment                  # 性格沉淀：攒够了提示回炼进注释层
+growth-review                     # 叙事回炼：碎片连成「我这一路」
 ```
 
 ---
