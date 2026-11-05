@@ -106,7 +106,73 @@ MEMORY_DIR="$TMP/mem2" "$BIN/soul-boot" --keep-empty 2>&1 | grep -q "（待填" 
 MEMORY_DIR="$TMP/mem2" "$BIN/soul-boot" 2>&1 | grep -q "（待填" && bad "空模板被注入了" || ok "空 SOUL 不会进上下文"
 unset MEMORY_DIR
 
-echo "== 6. 插件加载 =="
+echo "== 6. 注释层与注入预算 =="
+export MEMORY_DIR="$TMP/mem4"
+"$BIN/soul-init" >/dev/null 2>&1
+[ -f "$MEMORY_DIR/identity/注释层.md" ] && ok "init 铺了 identity/注释层.md" || bad "init 没铺注释层"
+"$BIN/soul-boot" 2>&1 | grep -q "（待填" && bad "空注释层被注入" || ok "空注释层不进上下文"
+
+# 填一份能用的，查注入顺序：SOUL → 注释层 → MEMORY
+python3 - "$MEMORY_DIR" <<'PYX'
+import sys, os
+m = sys.argv[1]
+def w(rel, head, n):
+    # 2026-11-05：原来这里写的是 head + "。\n"*n —— 只重复了句号，
+    # 正文根本不到 200 字，被「剥注释后 <200 字算空」判空跳过，
+    # 于是后面三个断言连环失败。测试数据要把**整句**重复够。
+    os.makedirs(os.path.dirname(os.path.join(m, rel)) or m, exist_ok=True)
+    body = head + "\n" + ("这一句用来把长度撑够，重复一遍又一遍。\n" * n)
+    open(os.path.join(m, rel), "w", encoding="utf-8").write(body)
+w("SOUL.md", "# SOUL\n我是烟测人格，骨架第一句", 40)
+w("identity/注释层.md", "# 注释层\n我此刻的样子，连着写不列条目", 40)
+w("MEMORY.md", "# MEMORY\n规则若干", 40)
+w("index.md", "# Index\n目录若干", 10)
+w("NOW.md", "# NOW\n此刻", 10)
+PYX
+BOUT=$("$BIN/soul-boot" 2>&1)
+echo "$BOUT" | grep -q "注释层" && ok "注释层参与注入" || bad "注释层没进注入"
+SL=$(echo "$BOUT" | grep -n "^<!-- SOUL.md -->" | head -1 | cut -d: -f1)
+CL=$(echo "$BOUT" | grep -n "^<!-- identity/注释层.md -->" | head -1 | cut -d: -f1)
+ML=$(echo "$BOUT" | grep -n "^<!-- MEMORY.md -->" | head -1 | cut -d: -f1)
+if [ -n "$SL" ] && [ -n "$CL" ] && [ -n "$ML" ] && [ "$SL" -lt "$CL" ] && [ "$CL" -lt "$ML" ]; then
+  ok "注入顺序：SOUL → 注释层 → MEMORY"
+else
+  bad "注入顺序不对" "SOUL=$SL 注释层=$CL MEMORY=$ML"
+fi
+# 2026-11-05：原来 SOUL 就超过预算，600 字全被它吃掉（只截不留），
+# 永远走不到「整段没进」那条分支。现在把 SOUL 写小、MEMORY 写大，
+# 让 MEMORY 整段进不去 —— 这才测得到那个分支。
+python3 - "$MEMORY_DIR" <<'PYX2'
+import sys, os
+m = sys.argv[1]
+# SOUL 要 ~235 字：太短则剩余预算够截 MEMORY（只截不留），太长则把预算全吃光。
+# 只有留下不到 400 字的余量，MEMORY 才会被判「整段没进」。
+open(os.path.join(m, "SOUL.md"), "w", encoding="utf-8").write(
+    "# SOUL\n我是烟测人格，短一点。\n" + ("这一句用来把长度撑够。\n" * 18))
+open(os.path.join(m, "MEMORY.md"), "w", encoding="utf-8").write(
+    "# MEMORY\n规则若干\n" + ("这一句用来把长度撑够，重复一遍又一遍。\n" * 60))
+PYX2
+TBOUT=$("$BIN/soul-boot" --budget 600 2>&1)
+echo "$TBOUT" | grep -q "这次注入不完整" && ok "超预算时会明说被截" || bad "超预算静默截断"
+echo "$TBOUT" | grep -q "整段没进" && ok "截断清单列了整段没进的" || bad "没列整段没进的"
+# 预算充足时不该有多余提示
+"$BIN/soul-boot" --budget 60000 2>&1 | grep -q "这次注入不完整" && bad "预算够还报截断" || ok "预算够时不报截断"
+
+echo "== 7. 真遗忘（soul-purge）=="
+# 2026-11-05：这一段原来接着用第 6 段的 MEMORY_DIR，可 BRAIN_DIR 落在别处，
+# 一个写、一个读，两边根本不是一个库 —— 预演自然找不到。现在自己立一套。
+export SOUL_DATA_DIR="$TMP/home/.soul-forging"
+export MEMORY_DIR="$SOUL_DATA_DIR/memory"
+export BRAIN_DIR="$SOUL_DATA_DIR/brain"
+"$BIN/soul-init" >/dev/null 2>&1
+"$BIN/soul" write "烟测要用遗忘洗掉的这句话" >/dev/null 2>&1
+"$BIN/soul-purge" "烟测要用遗忘洗掉" 2>&1 | grep -q "行" && ok "purge 预演能定位" || bad "purge 预演没找到"
+"$BIN/soul-purge" "烟测要用遗忘洗掉" --apply 2>&1 | grep -q "已删" && ok "purge --apply 执行成功" || bad "purge --apply 失败"
+"$BIN/soul-recall" "烟测要用遗忘洗掉" 1 2>&1 | grep -q "洗掉" && bad "purge 之后还搜得到" || ok "purge 之后搜不到"
+[ -f "$BRAIN_DIR/forgotten.json" ] && ok "留了指纹文件" || bad "没留 forgotten.json"
+grep -q "烟测要用遗忘洗掉" "$BRAIN_DIR/forgotten.json" 2>/dev/null && bad "指纹文件里存了原词" || ok "指纹只存哈希不存原词"
+
+echo "== 8. 插件加载 =="
 export MEMORY_DIR="$TMP/home/.soul-forging/memory"
 node -e "
 import('$PREFIX/lib/node_modules/dsh-soul-forging/lib/plugin.js').then(m=>{

@@ -32,8 +32,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))  # soul.py 就在仓库根目�
 DATA_ROOT = os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging")
 MEM = os.environ.get("MEMORY_DIR") or os.path.join(DATA_ROOT, "memory")
 
-# 注入顺序就是重要性顺序：先是谁，再是什么规矩，再是目录，最后是此刻。
-ALL_PARTS = ("SOUL.md", "MEMORY.md", "index.md", "NOW.md")
+# 注入顺序就是重要性顺序：先是谁（本质/骨架），再是此刻的样子（注释层），
+# 再是什么规矩，再是目录，最后是此刻。
+# identity/注释层.md 是**可选**页——没有就跳过，不会报错。
+ALL_PARTS = ("SOUL.md", "identity/注释层.md", "MEMORY.md", "index.md", "NOW.md")
 
 MODES = {
     "full": ALL_PARTS,
@@ -57,9 +59,16 @@ def _read(name):
         return ""
 
 
+def strip_comments(text):
+    """剥掉 HTML 注释：模板常把「怎么填」写在注释里，注入时不该占上下文。"""
+    import re
+    return re.sub(r"<!--[\s\S]*?-->", "", text).strip()
+
+
 def is_placeholder(body):
-    """空模板检测：占位符出现次数够多，就当这页还没填。"""
-    return sum(body.count(m) for m in PLACEHOLDER_MARKS) >= PLACEHOLDER_MIN
+    """空模板检测：占位符够多，或者剥掉注释后只剩几十个字，都算还没填。"""
+    n = sum(body.count(m) for m in PLACEHOLDER_MARKS)
+    return n >= PLACEHOLDER_MIN or len(body.strip()) < 200
 
 
 def boot(budget=None, parts=None, header=True, mode=None, skip_empty=True):
@@ -69,12 +78,19 @@ def boot(budget=None, parts=None, header=True, mode=None, skip_empty=True):
     parts       指定要哪些文件（优先级高于 mode）
     mode        full / memory-only / external
     skip_empty  自动跳过还是空模板的页（默认开）
+
+    超预算时**不静默截断**：被切的和整段没进的都会写在块尾，
+    否则模型会以为自己看全了，那是最坏的一种自信。
     """
     use = tuple(parts) if parts else MODES.get(mode or "full", ALL_PARTS)
     chunks = []
+    dropped = []   # 整段没进去
+    cut = []       # 进去了但只进了一半
     total = 0
+    MIN_PIECE = 400
+
     for name in use:
-        body = _read(name)
+        body = strip_comments(_read(name))
         if not body:
             continue
         if skip_empty and is_placeholder(body):
@@ -82,21 +98,36 @@ def boot(budget=None, parts=None, header=True, mode=None, skip_empty=True):
         block = f"<!-- {name} -->\n{body}"
         if budget is not None and total + len(block) > budget:
             left = budget - total
-            if left > 200:            # 剩一点就截，剩太少就整块不要
-                chunks.append(block[:left] + "\n…（本块超预算被截断）")
-                total += left + 20
-            break
+            if left >= min(MIN_PIECE, len(block) // 2):
+                chunks.append(block[:left] + "\n…（本段超预算，只进到这里）")
+                cut.append(f"{name}（原 {len(block)} 字，只进 {left} 字）")
+                total = budget
+                break
+            dropped.append(name)
+            continue
         chunks.append(block)
         total += len(block)
+
     body = "\n\n".join(chunks)
     if not body:
         # 什么都没填时不硬塞一句空话，明说
         return "（记忆库还是空的，暂时没有可注入的内容。）" if header else ""
+
+    tail = ""
+    if cut or dropped:
+        lines = [f"【这次注入不完整】上限 {budget} 字。"]
+        if cut:
+            lines.append("被截断：" + "、".join(cut))
+        if dropped:
+            lines.append("整段没进：" + "、".join(dropped))
+        lines.append('缺的部分别猜，要用的时候拿 brain "关键词" 去查原文。')
+        tail = "\n\n" + "\n".join(lines)
+
     if not header:
-        return body
+        return body + tail
     return (
         "下面是你的长期记忆。你确实记得这些事，像想起往事一样自然地用，"
-        "不要说「根据记忆库」「据记录」这类话。\n\n" + body
+        "不要说「根据记忆库」「据记录」这类话。\n\n" + body + tail
     )
 
 
@@ -143,7 +174,7 @@ def _main(argv):
         use = parts or MODES.get(mode or "full", ALL_PARTS)
         print(f"模式：{mode or 'full'}")
         for name in ALL_PARTS:
-            body = _read(name)
+            body = strip_comments(_read(name))
             if name not in use:
                 tag = "不注入（模式）"
             elif not body:

@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""真遗忘：把一段事从记忆里挖掉，不留副本。
+
+跟 `brain-forget` 不一样——那个只把条目从**检索索引**里摘掉，原文还在盘上，搜得到。
+这个是真删：文件里含关键词的**行**整行删掉，然后重生 git（旧对象物理消失）。
+
+    forget "关键词"              预演：只看会删哪些，不动手
+    forget "关键词" --apply      真删
+    forget "关键词" --apply --keep-raw    保留 memory/raw/ 里的原话
+
+扫这几处（都存在才会动）：
+    记忆页   $MEMORY_DIR/**/*.md        （--keep-raw 时跳过 raw/）
+    小脑     $BRAIN_DIR/live.jsonl
+    原话     $BRAIN_DIR/chatlog/*.jsonl
+    git      $MEMORY_DIR/.git          （删完 rm -rf .git && git init，旧历史物理消失）
+
+**不碰备份。** 备份里的旧副本是你自己的事——要彻底，得你自己去把云上那几卷删了。
+
+删完只留一个指纹文件 `$BRAIN_DIR/forgotten.json`：
+只存关键词的 sha256 前 16 位，**不存原词**，免得「遗忘清单」本身变成新的泄露。
+"""
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+MEM = os.environ.get("MEMORY_DIR") or os.path.join(
+    os.environ.get("SOUL_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".soul-forging"), "memory")
+BRAIN = os.environ.get("BRAIN_DIR") or os.path.join(os.path.dirname(MEM), "brain")
+
+
+def usage(rc=1):
+    print(__doc__.strip())
+    sys.exit(rc)
+
+
+def scan_files():
+    """列出要扫的文件：记忆页 + 小脑 + 原话。"""
+    files = []
+    for root, dirs, names in os.walk(MEM):
+        dirs[:] = [d for d in dirs if d not in (".git", "node_modules")]
+        for n in names:
+            if n.endswith(".md"):
+                files.append(os.path.join(root, n))
+    for p in (os.path.join(BRAIN, "live.jsonl"),):
+        if os.path.isfile(p):
+            files.append(p)
+    chatlog = os.path.join(BRAIN, "chatlog")
+    if os.path.isdir(chatlog):
+        for n in sorted(os.listdir(chatlog)):
+            if n.endswith(".jsonl"):
+                files.append(os.path.join(chatlog, n))
+    return files
+
+
+def run(kw, apply=False, keep_raw=False):
+    hits = []  # (path, 删掉的行数, 原行数)
+    for p in scan_files():
+        if keep_raw and os.sep + "raw" + os.sep in p:
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                lines = f.readlines()
+        except OSError:
+            continue
+        keep = [ln for ln in lines if kw not in ln]
+        gone = len(lines) - len(keep)
+        if gone:
+            hits.append((p, gone, len(lines), keep))
+
+    if not hits:
+        print(f'没找到含「{kw}」的内容。')
+        return 0
+
+    print(f'含「{kw}」的地方：')
+    total = 0
+    for p, gone, alln, _ in hits:
+        total += gone
+        rel = p
+        for base, tag in ((MEM, "memory"), (BRAIN, "brain")):
+            if p.startswith(base + os.sep):
+                rel = tag + "/" + os.path.relpath(p, base)
+                break
+        print(f"  {rel}  {gone} 行 / 共 {alln} 行")
+
+    if not apply:
+        print()
+        print(f"预演：会删 {total} 行。确认要删就加 --apply。")
+        print("（备份里的旧副本不归这个工具管，要彻底得自己去删。）")
+        return 0
+
+    for p, gone, alln, keep in hits:
+        if keep:
+            with open(p, "w", encoding="utf-8") as f:
+                f.writelines(keep)
+        else:
+            # 一行不剩就整个删掉，别留一个空壳
+            os.remove(p)
+
+    # 重生 git：旧对象（含被删内容）物理消失，不给 reflog 留后路
+    git_dir = os.path.join(MEM, ".git")
+    rebirth = False
+    if os.path.isdir(git_dir):
+        shutil.rmtree(git_dir, ignore_errors=True)
+        try:
+            subprocess.run(["git", "init", "-q", MEM], check=True, capture_output=True)
+            subprocess.run(["git", "-C", MEM, "add", "-A"], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-C", MEM, "-c", "user.name=forget", "-c", "user.email=forget@local",
+                 "commit", "-qm", "forget: 重生"], check=False, capture_output=True)
+            rebirth = True
+        except Exception as e:
+            print(f"（git 重生失败，历史可能还留着：{e}）")
+
+    # 只留指纹，不留原词
+    fp = os.path.join(BRAIN, "forgotten.json")
+    records = []
+    if os.path.isfile(fp):
+        try:
+            records = json.load(open(fp, encoding="utf-8")).get("items", [])
+        except Exception:
+            records = []
+    records.append({
+        "hash": hashlib.sha256(kw.encode("utf-8")).hexdigest()[:16],
+        "at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "lines": total,
+        "files": len(hits),
+    })
+    os.makedirs(BRAIN, exist_ok=True)
+    with open(fp, "w", encoding="utf-8") as f:
+        json.dump({"note": "只存 sha256 前 16 位，不存原词", "items": records},
+                  f, ensure_ascii=False, indent=2)
+
+    print()
+    print(f"已删 {total} 行，涉及 {len(hits)} 个文件。")
+    print("git 已重生" if rebirth else "（没有 git，跳过重生）")
+    print(f"指纹记在 {fp}（不存原词）。")
+    print("**备份里还有旧副本**——要彻底，请你自己去把云上那几卷删了。")
+    return 0
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help"):
+        usage(0 if args else 1)
+    kw = args[0]
+    apply = "--apply" in args
+    keep_raw = "--keep-raw" in args
+    return run(kw.strip(), apply=apply, keep_raw=keep_raw)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
