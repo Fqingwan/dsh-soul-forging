@@ -314,10 +314,13 @@ memory/     归使用者自己 —— 代码开源不等于记忆开源
 
 一句话版本：
 
-- 代码是本项目**从零实现**的，没有复制别人的源文件；
-- 思路参考过 [dsh-plugin-memory](https://github.com/LittleBlackTong/dsh-plugin-memory)（MIT）——
-  参考的是「markdown 记忆库 + 每轮注入 + index 当路由表」这一套做法；
+- **底层的记忆架构来自 [dsh-plugin-memory](https://github.com/LittleBlackTong/dsh-plugin-memory)（v0.10.0 · MIT）**——
+  `SOUL / MEMORY / index / NOW / log` 这套页面分工、每轮注入、digest 收尾，是它的设计；
+- 本项目是**照那套做法重写**，**没有复制它的源文件**（它 5165 行 JS，我们 217 行 + Python）；
+- 加上去的是它的**没有**：小脑检索、注释层、注入预算明示、三种模式、`soul-purge` 真遗忘、装机烟测；
 - **运行时零第三方依赖**，只用 Bash + Python 标准库 + DSH 自己的插件接口。
+
+两套可以共存——同时装的话，那份 LICENSE 各自保留。
 
 MIT 允许别人拿去做闭源产品，**但不允许把署名抹掉再当自己的发**。
 如果你要 fork 再发布，`NOTICE.md` 请随包带上。
