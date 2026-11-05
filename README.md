@@ -300,9 +300,24 @@ export SOUL_BACKUP_CMD='tar czf ~/soul-backup.tgz -C /path/to/repo memory'
 
 ---
 
-## 授权
+## 授权与来源
 
-代码 MIT。记忆内容（`memory/`）是你自己的。
+```
+代码        MIT —— 可以用、可以改、可以商用
+              唯一硬要求：保留 LICENSE 里的版权行 + NOTICE.md
+memory/     归使用者自己 —— 代码开源不等于记忆开源
+```
 
-思路参考过 [dsh-plugin-memory](https://github.com/LittleBlackTong/dsh-plugin-memory)（MIT）——
-这一版是**重写实现**，没有复制它的代码。如果你把它当插件装进 DSH，那份要单独保留它自己的 LICENSE。
+**Copyright (c) 2026 晴晚**
+
+详细的来源拆分、第三方说明、以及「万一有雷同怎么办」，全在 [NOTICE.md](NOTICE.md)。
+
+一句话版本：
+
+- 代码是本项目**从零实现**的，没有复制别人的源文件；
+- 思路参考过 [dsh-plugin-memory](https://github.com/LittleBlackTong/dsh-plugin-memory)（MIT）——
+  参考的是「markdown 记忆库 + 每轮注入 + index 当路由表」这一套做法；
+- **运行时零第三方依赖**，只用 Bash + Python 标准库 + DSH 自己的插件接口。
+
+MIT 允许别人拿去做闭源产品，**但不允许把署名抹掉再当自己的发**。
+如果你要 fork 再发布，`NOTICE.md` 请随包带上。

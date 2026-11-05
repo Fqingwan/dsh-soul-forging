@@ -55,14 +55,13 @@
   },
   "keywords": [
     "dsh",
-    "dsh-plugin",
+    "plugin",
     "memory",
-    "soul",
     "persona",
+    "soul",
     "markdown",
     "llm",
-    "agent",
-    "long-term-memory"
+    "agent"
   ],
   "engines": {
     "node": ">=18"
@@ -78,7 +77,10 @@
   "bugs": {
     "url": "https://github.com/Fqingwan/dsh-soul-forging/issues"
   },
-  "author": "",
+  "author": {
+    "name": "晴晚",
+    "url": "https://github.com/Fqingwan/dsh-soul-forging"
+  },
   "scripts": {
     "test": "bash scripts/smoke.sh",
     "prepublishOnly": "bash scripts/smoke.sh"
