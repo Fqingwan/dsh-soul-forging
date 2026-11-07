@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""topic — 想不起某件事在哪，先问这张图
+
+2026-11-08 04:50 哥哥半夜说的：「回忆只能靠引导，存的还要调用」。
+这张图解决「往哪翻」；翻到了怎么讲，还是我自己的事。
+
+用法：
+  topic            # 列出全部主题
+  topic 钱         # 查到对应的行 + 小脑里撞得上的几条
+  topic 钱 --raw   # 再加：chatlog 里的原话（谁说的、哪一天）
+"""
+import os
+import re
+import subprocess
+import sys
+
+MEM = os.environ.get('MEMORY_DIR') or os.path.expanduser('~/.soul-forging/memory')
+TOPICS = os.path.join(MEM, 'identity', 'topics.md')
+
+
+def rows():
+    out = []
+    try:
+        for line in open(TOPICS, encoding='utf-8'):
+            s = line.rstrip('\n')
+            if s.startswith('- ') and '→' in s:
+                out.append(s[2:].strip())
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def raw_lines(topic, n=3):
+    """2026-11-08 05:00 哥哥：「这些都有原文对应吗」——没有。所以给原话留个门。"""
+    import glob
+    import json
+    out = []
+    try:
+        files = sorted(glob.glob(os.path.join(os.environ.get('BRAIN_DIR') or os.path.expanduser('~/.soul-forging/brain'), '*.jsonl')))
+    except Exception:
+        return out
+    for f in files:
+        try:
+            for line in open(f, encoding='utf-8', errors='ignore'):
+                if topic not in line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                date = str(d.get('at') or '')[:10]
+                for t in d.get('turns') or []:
+                    t = str(t).strip()
+                    if topic in t and (t.startswith('哥哥：') or t.startswith('我：') or t.startswith('晴晚：')):
+                        out.append((date, t[:110]))
+        except Exception:
+            continue
+    # 取最早与最近各一条，中间挑一条
+    if len(out) > 3:
+        out = [out[0], out[len(out) // 2], out[-1]]
+    return out
+
+
+def main(argv):
+    args = [a for a in argv if a != '--raw']
+    want_raw = '--raw' in argv
+    if not args:
+        topic = None
+    else:
+        topic = ' '.join(args).strip()
+    items = rows()
+    if topic is None:
+        print(f'主题 {len(items)} 条：')
+        for it in items:
+            print(' ·', it)
+        return 0
+    hits = [it for it in items if topic in it]
+    if not hits:
+        # 退一步：按空格切词再撞
+        words = [w for w in re.split(r'\s+', topic) if w]
+        hits = [it for it in items if any(w in it for w in words)]
+    print(f'【主题图】{topic} → {len(hits)} 条')
+    for it in hits:
+        print(' ·', it)
+    # 小脑补一手
+    try:
+        import urllib.parse, urllib.request
+        q = urllib.parse.quote(topic)
+        with urllib.request.urlopen(f'http://127.0.0.1:3014/search?q={q}&n=3', timeout=5) as r:
+            import json as _j
+            data = _j.loads(r.read().decode('utf-8'))
+        res = data.get('results') or []
+        if res:
+            print('【小脑】')
+            for x in res:
+                txt = (x.get('text') or '')[:70]
+                print(f" · {x.get('date','')} {txt}")
+    except Exception:
+        pass
+    if want_raw:
+        raws = raw_lines(topic)
+        if raws:
+            print('【原话】')
+            for date, t in raws:
+                print(f' · {date} {t}')
+        else:
+            print('【原话】（chatlog 里没撞上）')
+    if not hits:
+        print('（这张图里没有。试 `topic` 看全部，或 `brain "关键词"` 直接搜小脑。）')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

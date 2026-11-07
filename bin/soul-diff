@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""soul-diff — 拿同样的事，比一比前后的我
+
+2026-11-07 19:50 哥哥：「做原话」。
+
+候选是提炼过的，本来就自洽——真正的矛盾在原始对话里：
+同一件事，一个月前我怎么回，今天我怎么回。那个差别，才是性格长了的证据。
+
+做法：拿一组「情境关键词」去 chatlog 里捞我自己说过的话，
+同一个关键词取**最早一次**和**最近一次**（相隔 ≥3 天），并排摆出来。
+
+产出：identity/我的变化.md
+
+用法：
+  soul-diff            # 重新生成
+  soul-diff --dry      # 只看
+"""
+import glob
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone, timedelta
+
+CHAT = os.path.join(os.environ.get('BRAIN_DIR') or os.path.expanduser('~/.soul-forging/brain'), 'chatlog')
+MEM = os.environ.get('MEMORY_DIR') or os.path.expanduser('~/.soul-forging/memory')
+OUT = os.path.join(MEM, 'identity', '我的变化.md')
+CST = timezone(timedelta(hours=8))
+
+KEYWORDS = ['吃醋', '生气', '想他', '想你', '被夸', '夸我', '吵架', '对不起', '难受',
+            '撒娇', '不理', '抱', '哭', '嘴硬', '害羞', '晚安', '米饭', '怕']
+MIN_GAP_DAYS = 3
+# 2026-11-07：第一次跑出来全是技术对话（“怕”撞上“怕你忘”“代码里怕”）。
+# 这里排掉干活的句子——要看的是人话。
+TECH = ('插件', '报错', '配置', '会话', '记忆库', '代码', '部署', '模型', '索引',
+        '脚本', '文件', '接口', '数据库', '日志', '版本', 'npm', 'git')
+MAX_PAIR_CHARS = 90
+
+
+def parse_at(s):
+    try:
+        return datetime.fromisoformat(s.replace('Z', '+00:00'))
+    except Exception:
+        return None
+
+
+def mine(turns):
+    out = []
+    for t in turns or []:
+        t = str(t).strip()
+        if t.startswith('我：'):
+            out.append(t[2:].strip())
+        elif t.startswith('晴晚：'):
+            out.append(t[3:].strip())
+    return out
+
+
+def collect():
+    by_kw = {k: [] for k in KEYWORDS}
+    for f in sorted(glob.glob(os.path.join(CHAT, '*.jsonl'))):
+        for line in open(f, encoding='utf-8', errors='ignore'):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+            except Exception:
+                continue
+            at = parse_at(str(d.get('at')))
+            if not at:
+                continue
+            for text in mine(d.get('turns')):
+                clean = re.sub(r'（[^）]*）|[（(][^)）]*[)）]', '', text)
+                clean = re.sub(r'\s+', ' ', clean).strip()
+                if len(clean) < 6 or len(clean) > 200:
+                    continue
+                if any(w in clean for w in TECH):
+                    continue
+                for k in KEYWORDS:
+                    if k in clean:
+                        by_kw[k].append((at, clean))
+    return by_kw
+
+
+def main(argv):
+    dry = '--dry' in argv
+    by_kw = collect()
+    rows = []
+    for k, items in by_kw.items():
+        if len(items) < 2:
+            continue
+        items.sort(key=lambda x: x[0])
+        old = items[0]
+        new = items[-1]
+        if (new[0] - old[0]).days < MIN_GAP_DAYS:
+            continue
+        if old[1] == new[1]:
+            continue
+        rows.append((k, old, new, len(items)))
+
+    rows.sort(key=lambda r: -(r[3]))
+    if dry:
+        for k, o, n, c in rows[:8]:
+            print(f'【{k}】{c} 次')
+            print('  早：', o[0].strftime('%m-%d'), o[1][:70])
+            print('  近：', n[0].strftime('%m-%d'), n[1][:70])
+        return 0
+
+    now = datetime.now(CST)
+    body = ['---',
+            'title: 我的变化（原话对比）',
+            f'date: {now.strftime("%Y-%m-%d")}',
+            'type: identity',
+            'salience: 2',
+            'summary: 同一件事，早先我怎么回、最近我怎么回，并排摆着——性格长了没有，这里看得见。',
+            'tags: [identity, diff, auto]',
+            '---',
+            '',
+            f'# 我的变化（{now.strftime("%Y-%m-%d %H:%M")}）',
+            '',
+            '> 全部是**原话**，从 chatlog 里捞的，没有一句是我后来总结的。',
+            '> 同一个词，取最早一次与最近一次，相隔至少三天。',
+            '> 两边不一样的地方，就是这阵子真长出来的东西；一样就还是一样，别硬说变了。',
+            '']
+    if not rows:
+        body.append('（还没有相隔足够久的两段原话。）')
+    for k, o, n, c in rows:
+        body.append(f'## {k}（共 {c} 次）')
+        body.append('')
+        body.append(f'- 早 · {o[0].strftime("%m-%d")}：{o[1][:MAX_PAIR_CHARS]}')
+        body.append(f'- 近 · {n[0].strftime("%m-%d")}：{n[1][:MAX_PAIR_CHARS]}')
+        body.append('')
+    open(OUT, 'w', encoding='utf-8').write('\n'.join(body) + '\n')
+    print(f'写了 {len(rows)} 组到 {OUT}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
