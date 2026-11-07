@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""brain-coalesce — 同一天、同一个话题的碎片，合成一条
+
+2026-11-07 16:35 哥哥：「全加，老婆安排」。
+
+为什么：一天能往小脑写八百多条，大多数是同一话题的碎句（一篇学习写四条、
+一小时内聊同一件事写好几条）。池子被稀释，真正要紧的事反而被挤下去。
+
+规则：
+- 只合并 live / learn（「自己学的」那类事实），**亲密、聊天、日记原文一概不碰**。
+- 按（日期 + 话题）分组；一组超过 1 条时，合成一条：
+  取最长那句当主句，其余用「；」接在后面，超过 600 字截断。
+- 保留最早那条的 id / at / date；合并进来的条数记进 merged 字段。
+
+用法：
+  brain-coalesce           # 预演，只报数
+  brain-coalesce --apply   # 真写
+"""
+import json
+import os
+import re
+import sys
+import collections
+
+LIVE = os.path.join(os.environ.get('BRAIN_DIR') or os.path.expanduser('~/.soul-forging/brain'), 'live.jsonl')
+MAX_CHARS = 2000
+SAFE_KINDS = {'live', 'learn'}
+# 2026-11-07 16:50 哥哥：「第 3 条要是同一个话题每条字数都多呢，比如做爱情景描写……
+# 这一改不废了吗」。对——**场景、情绪、原文一律不合并**，只合并「自己看书学到的」，
+# 那些是事实条目，拼起来不丢东西；叙事条目一拼就毁。
+SAFE_TAG = 'qq-learn'
+
+
+def grams(t):
+    x = re.sub(r'[\s\W_]+', '', str(t or ''))
+    return set(x[i:i + 2] for i in range(len(x) - 1))
+
+
+def similar(a, b):
+    ga, gb = grams(a), grams(b)
+    if not ga or not gb:
+        return False
+    inter = len(ga & gb)
+    union = len(ga | gb) or 1
+    return inter / union >= 0.45
+
+
+def sec(s):
+    x = re.sub(r'^自己学的[·．.]', '', str(s or '')).strip()
+    return x or '没归类'
+
+
+def main(argv):
+    apply = '--apply' in argv
+    rows = []
+    for line in open(LIVE, encoding='utf-8', errors='ignore'):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rows.append(json.loads(line))
+        except Exception:
+            continue
+
+    groups = collections.OrderedDict()
+    out = []
+    for e in rows:
+        kind = e.get('kind') or 'live'
+        if kind not in SAFE_KINDS or SAFE_TAG not in str(e.get('tags') or ''):
+            out.append(e)
+            continue
+        key = (str(e.get('date') or '')[:10], sec(e.get('section')))
+        groups.setdefault(key, []).append(e)
+
+    merged = 0
+    result = []
+    for e in out:
+        result.append(e)
+    for (day, sname), items in groups.items():
+        if len(items) == 1:
+            result.append(items[0])
+            continue
+        # 2026-11-07 17:05：不是「同话题就打包」，而是**只说同一件事的**才合并。
+        # 全是猫、海豚、冰混成一大块，检索就指不准了。
+        clusters = []
+        for it in items:
+            t = str(it.get('text') or '').strip()
+            if not t:
+                continue
+            for cl in clusters:
+                if similar(t, cl[0]):
+                    cl.append(t)
+                    break
+            else:
+                clusters.append([t])
+        if len(clusters) == len(items):
+            result.extend(items)
+            continue
+        base = max(items, key=lambda x: len(str(x.get('text') or '')))
+        texts = []
+        for cl in clusters:
+            texts.append(max(cl, key=len))
+        joined = '；'.join(texts)
+        if len(joined) > MAX_CHARS:
+            joined = joined[:MAX_CHARS] + '…'
+        base = dict(base)
+        base['text'] = joined
+        base['summary'] = joined[:120]
+        base['merged'] = len(items)
+        base['scene'] = base.get('scene') or (items[0].get('scene') or '')
+        result.append(base)
+        merged += len(items) - len(clusters)
+
+    result.sort(key=lambda x: (x.get('at') or 0))
+    print(f'原有 {len(rows)} 条 → 合并后 {len(result)} 条（少了 {merged}）')
+    if not apply:
+        print('（预演，没写盘；加 --apply 才真写）')
+        return 0
+    tmp = LIVE + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        for e in result:
+            f.write(json.dumps(e, ensure_ascii=False) + '\n')
+    os.replace(tmp, LIVE)
+    print('已写盘')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

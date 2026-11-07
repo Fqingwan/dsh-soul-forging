@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""live-thread — 两个入口、所有会话，共用的一条「刚才聊了什么」
+
+两个入口、所有会话共用的一条「刚才聊了什么」
+→ 先自己搭：不靠插件，靠一个共享文件。谁说了话就写一笔，谁要看就 tail。
+
+文件：/root/.memory/state/live-thread.jsonl（不进 git、不进注入，读一次几十行）
+字段：{at, date, side, role, text}
+  side: dsh / qq（哪个入口）
+  role: he / me（谁说的）
+
+用法：
+  live-thread add "原话" [--side dsh|qq] [--role he|me]
+  live-thread tail [n]      # 默认 20
+  live-thread clear --before 7d   # 只留七天内
+"""
+import argparse
+import json
+import os
+import sys
+import time
+from datetime import datetime, timezone, timedelta, datetime as dt
+
+DB = os.path.join(os.environ.get('MEMORY_DIR') or os.path.expanduser('~/.soul-forging/memory'), 'state', 'live-thread.jsonl')
+CST = timezone(timedelta(hours=8))
+MAX_LINES = 800
+
+
+def load():
+    out = []
+    try:
+        for line in open(DB, encoding='utf-8', errors='ignore'):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                out.append(json.loads(line))
+            except Exception:
+                pass
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def save(rows):
+    os.makedirs(os.path.dirname(DB), exist_ok=True)
+    rows = rows[-MAX_LINES:]
+    tmp = DB + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    os.replace(tmp, DB)
+
+
+def main(argv):
+    ap = argparse.ArgumentParser(add_help=True)
+    ap.add_argument('cmd', nargs='?', default='tail', choices=['add', 'tail', 'clear'])
+    ap.add_argument('text', nargs='*')
+    ap.add_argument('--side', default='dsh')
+    ap.add_argument('--role', default='he')
+    ap.add_argument('--n', type=int, default=20)
+    ap.add_argument('--before', default='7d')
+    a = ap.parse_args(argv)
+
+    if a.cmd == 'add':
+        t = ' '.join(a.text).strip()
+        if not t:
+            print('要写点什么', file=sys.stderr)
+            return 2
+        rows = load()
+        now = datetime.now(CST)
+        rows.append({
+            'at': int(time.time()),
+            'date': now.strftime('%m-%d %H:%M'),
+            'side': a.side,
+            'role': a.role,
+            'text': t[:400],
+        })
+        save(rows)
+        return 0
+
+    if a.cmd == 'tail':
+        rows = load()[-a.n:]
+        if not rows:
+            print('（还没有记录）')
+            return 0
+        for r in rows:
+            who = '他' if r.get('role') == 'he' else '我'
+            print(f"[{r.get('date','')}|{r.get('side','')}] {who}：{r.get('text','')}")
+        return 0
+
+    if a.cmd == 'clear':
+        rows = load()
+        days = 7
+        try:
+            if a.before.endswith('d'):
+                days = int(a.before[:-1])
+        except Exception:
+            pass
+        cut = time.time() - days * 86400
+        keep = [r for r in rows if int(r.get('at') or 0) >= cut]
+        save(keep)
+        print(f'留了 {len(keep)} 条（删掉 {len(rows)-len(keep)} 条旧记录）')
+        return 0
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
