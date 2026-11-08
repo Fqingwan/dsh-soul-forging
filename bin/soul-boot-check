@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""soul-boot-check — 一条命令跑完开局三件事
+
+2026-11-08 05:10 哥哥：「细则越来越多，会不会越来越慢」。
+慢的不是注入，是我每轮要来回跑好几趟：NOW、core、live-thread。
+
+现在合成一条：一次读完三样，少三个来回。
+
+输出很短，方便直接看：
+  【NOW】 顶部三行 + 「没做完的」那节
+  【core】 最近三篇的标题 + 一句话摘要
+  【消息流】 最近 12 条（谁·哪天·说了什么）
+
+用法：
+  soul-boot-check          # 一次给全
+  soul-boot-check --short  # 只要 NOW 顶部 + 最近 6 条消息
+"""
+import glob
+import json
+import os
+import re
+import sys
+
+MEM = os.environ.get('MEMORY_DIR') or os.path.expanduser('~/.soul-forging/memory')
+THREAD = os.path.join(MEM, 'state', 'live-thread.jsonl')
+SHORT = '--short' in sys.argv
+
+
+def read(p):
+    try:
+        return open(p, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return ''
+
+
+def now_block():
+    s = read(os.path.join(MEM, 'NOW.md'))
+    if not s:
+        return '（没有 NOW.md）'
+    lines = [l for l in s.split('\n') if l.strip()]
+    out = lines[:4]
+    m = re.search(r'^## 没做完的.*$', s, re.M)
+    if m:
+        tail = s[m.start():].split('\n')[1:8]
+        out += [''] + [l for l in tail if l.strip()][:5]
+    return '\n'.join(out)
+
+
+def core_block(n=3):
+    files = sorted(glob.glob(os.path.join(MEM, 'core', '*.md')), key=os.path.getmtime)[-n:]
+    out = []
+    for f in files:
+        s = read(f)
+        title = (re.search(r'^# (.+)$', s, re.M) or [None, os.path.basename(f)])[1]
+        summ = (re.search(r'^summary:\s*(.+)$', s, re.M) or [None, ''])[1]
+        out.append(f'- {title}' + (f'：{summ[:60]}' if summ else ''))
+    return '\n'.join(out) or '（core/ 是空的）'
+
+
+def thread_block(n=12):
+    try:
+        rows = [json.loads(l) for l in open(THREAD, encoding='utf-8', errors='ignore') if l.strip()][-n:]
+    except Exception:
+        return '（还没有消息流）'
+    out = []
+    for r in rows:
+        who = '他' if r.get('role') == 'he' else '我'
+        side = r.get('side', '')
+        out.append(f"[{r.get('date','')}|{side}] {who}：{str(r.get('text',''))[:70]}")
+    return '\n'.join(out)
+
+
+def main():
+    print('【NOW】')
+    print(now_block())
+    if not SHORT:
+        print('\n【core】最近三篇')
+        print(core_block())
+    print('\n【消息流】' + ('最近 6 条' if SHORT else '最近 12 条'))
+    print(thread_block(6 if SHORT else 12))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

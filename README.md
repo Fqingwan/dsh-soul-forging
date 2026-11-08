@@ -139,10 +139,16 @@ sudo npm i -g dsh-soul-forging --registry https://registry.npmjs.org
 ## 用
 
 ```bash
+# 开局（一条命令给全三样：NOW 顶部 · core 最近三篇 · 消息流最近十二条）
+soul-boot-check
+soul-boot-check --short        # 只要 NOW 顶部 + 最近六条
+
 # 写
 soul write "内容" --kind chat --section 小标题
 
 # 查
+soul-topic "钱"                   # 想不起在哪翻：主题图指页指词
+soul-topic "钱" --raw             # 连 chatlog 里的原话一起给
 soul-recall "关键词"              # 查小脑
 soul-recall --topics              # 看有哪些分类
 soul digest                       # 收尾该做哪四步
