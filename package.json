@@ -1,6 +1,6 @@
 {
   "name": "dsh-soul-forging",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Separate Vessels, One Heart · 异体同心 —— 给 AI 的可迁移长期记忆与铸魂流程：markdown 记忆库 + 小脑检索 + 能长出来的性格。纯本地，不要服务器。",
   "license": "MIT",
   "type": "module",
@@ -34,21 +34,24 @@
     "soul-boot-check": "./bin/soul-boot-check"
   },
   "files": [
-    "lib",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE.md",
+    "README.md",
     "bin",
+    "brain/fix-live-summary.py",
     "brain/index.py",
     "brain/server.py",
     "brain/soul_lib.py",
-    "brain/fix-live-summary.py",
-    "memory",
-    "docs",
-    "soul.py",
     "cordis.patch.yml",
+    "docs",
     "install.sh",
-    "README.md",
-    "LICENSE",
-    "NOTICE.md",
-    "scripts/smoke.sh"
+    "lib",
+    "memory",
+    "scripts/smoke-brain.sh",
+    "scripts/smoke-deep.sh",
+    "scripts/smoke.sh",
+    "soul.py"
   ],
   "dsh": {
     "bundle": {
@@ -88,6 +91,7 @@
   },
   "scripts": {
     "test": "bash scripts/smoke.sh",
-    "prepublishOnly": "bash scripts/smoke.sh"
+    "prepublishOnly": "bash scripts/smoke.sh",
+    "test:brain": "bash scripts/smoke-brain.sh"
   }
 }
