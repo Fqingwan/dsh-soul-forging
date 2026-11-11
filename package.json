@@ -1,6 +1,6 @@
 {
   "name": "dsh-soul-forging",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Separate Vessels, One Heart · 异体同心 —— 给 AI 的可迁移长期记忆与铸魂流程：markdown 记忆库 + 小脑检索 + 能长出来的性格。纯本地，不要服务器。",
   "license": "MIT",
   "type": "module",
