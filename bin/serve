@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # 起小脑检索服务（常驻）。已经在跑就不再起。
+# 默认起新服务 brain/brain_local_server.py（/context 组装 + POST /reload）；
+# 设 BRAIN_SERVER=legacy 时回退到旧 brain/server.py，方便对照。
 _SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
 source "$(dirname "$_SELF")/_common.sh"
 if curl -s -m 2 "$BRAIN_URL/health" | grep -q '"ok": true'; then
   echo "已在跑：$BRAIN_URL"; exit 0
 fi
 mkdir -p "$BRAIN_DIR"
-nohup "$PY" "$MEMKIT_ROOT/brain/server.py" >"$BRAIN_DIR/server.log" 2>&1 &
+if [ "${BRAIN_SERVER:-}" = "legacy" ]; then
+  echo "（BRAIN_SERVER=legacy，起旧服务 brain/server.py）"
+  nohup "$PY" "$MEMKIT_ROOT/brain/server.py" >"$BRAIN_DIR/server.log" 2>&1 &
+else
+  nohup "$PY" "$MEMKIT_ROOT/brain/brain_local_server.py" >"$BRAIN_DIR/server.log" 2>&1 &
+fi
 sleep 1
 curl -s -m 2 "$BRAIN_URL/health" || { echo "起不来，看 $BRAIN_DIR/server.log"; exit 1; }
 echo

@@ -16,3 +16,4 @@ __pycache__/
 .DS_Store
 __pycache__/
 （不放在这个仓库里）
+*.tgz

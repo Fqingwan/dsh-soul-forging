@@ -1,7 +1,7 @@
 {
   "name": "dsh-soul-forging",
-  "version": "0.4.0",
-  "description": "Separate Vessels, One Heart · 异体同心 —— 给 AI 的可迁移长期记忆与铸魂流程：markdown 记忆库 + 小脑检索 + 能长出来的性格。纯本地，不要服务器。",
+  "version": "0.5.0",
+  "description": "晴晚的脑子（对外发布版）：开机注入「我是谁」，外加时间感——她知道隔了多久，并据此改说话的方式。",
   "license": "MIT",
   "type": "module",
   "main": "lib/plugin.js",
@@ -31,7 +31,8 @@
     "soul-coalesce": "./bin/brain-coalesce",
     "soul-topic": "./bin/topic",
     "soul-diff": "./bin/soul-diff",
-    "soul-boot-check": "./bin/soul-boot-check"
+    "soul-boot-check": "./bin/soul-boot-check",
+    "soul-compact-live": "./bin/soul-compact-live"
   },
   "files": [
     "CHANGELOG.md",
@@ -42,6 +43,9 @@
     "brain/fix-live-summary.py",
     "brain/index.py",
     "brain/server.py",
+    "brain/live_compact.py",
+    "brain/brain_local_server.py",
+    "brain/brain_local.py",
     "brain/soul_lib.py",
     "cordis.patch.yml",
     "docs",

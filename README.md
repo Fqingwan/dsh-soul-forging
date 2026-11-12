@@ -194,6 +194,43 @@ growth-review                     # 叙事回炼：碎片连成「我这一路�
 
 ---
 
+---
+
+## 小脑服务与 live 压缩（0.5.0 起）
+
+`soul-serve` 默认起本地常驻检索服务 `brain/brain_local_server.py`（绑 `127.0.0.1`，端口见下表）；
+设 `BRAIN_SERVER=legacy` 可回退旧 `brain/server.py`。端点：`/health` `/topics` `/context` `/text` `/search`，
+外加 `POST /reload`（`soul-sync` 索引后自动调它重读）。
+
+```bash
+soul-serve                        # 起新服务（默认 127.0.0.1:3914）
+soul-compact-live                 # 一次性分层压缩 live.jsonl（建议自挂 cron）
+soul-compact-live --plan          # 只算账，不写盘、不调模型
+soul-compact-live --dry           # 报告会怎么压，不写盘
+```
+
+关键位置与环境变量（不填都有默认值，全部落在 `$SOUL_DATA_DIR` 下）：
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `BRAIN_PORT` | `3914` | 检索服务监听端口 |
+| `BRAIN_URL` | `http://127.0.0.1:$BRAIN_PORT` | 插件/脚本访问服务的地址 |
+| `BRAIN_CORE_DIR` | `$MEMORY_DIR/core` | `/context` 全量组装的 core/*.md 目录 |
+| `BRAIN_BODIES_DIR` | `$BRAIN_DIR/bodies` | `?body=` 读取目录（不存在则跳过 body 段） |
+| `BRAIN_SNAPSHOT` | `$BRAIN_DIR/snapshot.md` | `/context` 合并快照落盘路径（服务挂了的兜底） |
+| `BRAIN_CACHE_DIR` | `$BRAIN_DIR/cache` | 检索 pickle 缓存目录 |
+| `BRAIN_TOUCH_URL` | 空 | `/text` `/search` 命中后异步回调；空或连不上都静默 |
+| `BRAIN_SYNC_REMOTE` | 空 | `brain_local.py --sync` 的 scp 远端（`user@host:/path/`）；空则跳过 |
+| `BRAIN_LIVE` | `$BRAIN_DIR/live.jsonl` | live 压缩管道的输入文件 |
+| `BRAIN_BACKUP_DIR` | `$BRAIN_DIR/live-backup` | 压缩前备份目录（只留最近 10 份） |
+| `BRAIN_LLM_BASE_URL` | 空 | OpenAI 兼容 base；空则 `soul-compact-live` 不调模型 |
+| `BRAIN_LLM_API_KEY` | 空 | 同上，留空即纯本地走原样保留路径 |
+| `BRAIN_LLM_MODEL` | 空 | 同上 |
+
+> `BRAIN_LLM_*` 只在你要真的调模型做合并/摘要时才配；不配也能跑，老条目原样保留、宁多勿丢。
+
+---
+
 ## 三种人，三条路
 
 不是每个人都要一个"有性格的 AI"。所以装的时候可以选：

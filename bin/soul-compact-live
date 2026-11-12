@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# 一次性按年龄分层压缩 live.jsonl（五档 raw/merge/digest/brief/line，intimate 特权）。
+# 不拉起常驻进程；由用户自挂 cron。LLM 凭证走 BRAIN_LLM_*，无 key 时静默走原样保留路径。
+_SELF="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+source "$(dirname "$_SELF")/_common.sh"
+exec "$PY" "$MEMKIT_ROOT/brain/live_compact.py" "$@"
